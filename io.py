@@ -1,9 +1,11 @@
 import typing
 from struct import unpack
 
+from io_import_pskx.utils import fix_string_np, fix_string
+
 import numpy
-from numpy import dtype
-from numpy.typing import ArrayLike, DTypeLike
+from numpy import dtype, ndarray
+from numpy.typing import DTypeLike
 
 
 dispatch: dict[str, DTypeLike] = {
@@ -33,19 +35,19 @@ dispatch: dict[str, DTypeLike] = {
 
 class Mesh:
     TYPE: str = 'MESH'
-    Points: ArrayLike
-    Wedges: ArrayLike
-    Faces: ArrayLike
-    Normals: ArrayLike | None = None
-    Materials: ArrayLike | None = None
-    Bones: ArrayLike | None = None
-    Colors: ArrayLike | None = None
-    UVs: list[ArrayLike] = list()
-    ShapeKeys: list[ArrayLike] = list()
-    ShapeNames: ArrayLike | None = None
-    Physics: ArrayLike | None = None
+    Points: ndarray
+    Wedges: ndarray
+    Faces: ndarray
+    Normals: ndarray | None = None
+    Materials: ndarray | None = None
+    Bones: ndarray | None = None
+    Colors: ndarray | None = None
+    UVs: list[ndarray] = list()
+    ShapeKeys: list[ndarray] = list()
+    ShapeNames: ndarray | None = None
+    Physics: ndarray | None = None
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: str, value: ndarray):
         if key == 'PNTS0000':
             self.Points = value
         elif key == 'VTXW0000' or key == 'VTXW3200':
@@ -84,11 +86,11 @@ class Animation:
     StartBone: int
     FirstFrame: int
     NumFrames: int
-    Bones: ArrayLike | None = None
-    Keys: ArrayLike | None = None
-    ScaleKeys: ArrayLike | None = None
+    Bones: ndarray | None = None
+    Keys: ndarray | None = None
+    ScaleKeys: ndarray | None = None
 
-    def __setitem__(self, key: str, value: ArrayLike):
+    def __setitem__(self, key: str, value: ndarray):
         if key == 'ANIMINFO':
             (self.Name, self.Group, self.TotalBones, self.RootIncluded, self.CompressionStyle, self.Quotum, self.Reduce, self.Duration, self.FrameRate, self.StartBone, self.FirstFrame, self.NumFrames) = value[0]
             self.Name = fix_string_np(self.Name)
@@ -102,15 +104,7 @@ class Animation:
             self.ScaleKeys = value
 
 
-def fix_string(string: str) -> str:
-    return string.rstrip(b'\0').decode(errors='replace', encoding='ascii')
-
-
-def fix_string_np(string: ArrayLike) -> str:
-    return numpy.trim_zeros(string).tobytes().decode(errors='replace', encoding='ascii')
-
-
-def read_chunk(stream: typing.BinaryIO) -> tuple[ArrayLike | None, str]:
+def read_chunk(stream: typing.BinaryIO) -> tuple[ndarray | None, str]:
     (chunk_id, chunk_type, chunk_size, chunk_count) = unpack('20s3i', stream.read(32))
     chunk_id = fix_string(chunk_id)
     total_size = chunk_size * chunk_count

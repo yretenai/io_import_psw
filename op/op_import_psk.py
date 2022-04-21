@@ -1,7 +1,7 @@
 from typing import Union, Set
 
 import bpy
-from bpy.props import StringProperty, CollectionProperty
+from bpy.props import StringProperty, CollectionProperty, FloatProperty
 from bpy.types import Operator, Context, Property, OperatorFileListElement, TOPBAR_MT_file_import
 from bpy_extras.io_utils import ImportHelper
 from io_import_pskx.blend.psk import ActorXMesh
@@ -19,11 +19,20 @@ class op_import_psk(Operator, ImportHelper):
         type=OperatorFileListElement,
     )
 
+    resize_by: FloatProperty(
+        name='Resize By',
+        default=0.01,
+        min=0.01,
+        soft_max=10.0
+    )
+
     def draw(self, context: Context):
         layout = self.layout
 
         layout.use_property_split = True
         layout.use_property_decorate = True
+
+        layout.prop(self, 'resize_by')
 
     def execute(self, context: Context) -> Union[Set[str], Set[int]]:
         import os
