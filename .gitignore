@@ -1,0 +1,11 @@
+__pycache__ 
+.vscode 
+tmp 
+**/*.pyc 
+.idea
+*.blend*
+*.bak
+venv
+__data__
+__pyenv__
+*.code-workspace
