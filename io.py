@@ -52,21 +52,21 @@ class Mesh:
 
     NumVertices: int
     NumFaces: int
-    NumMaterials: int = 0
-    NumShapes: int = 0
-    NumUVs: int = 1
-    NumBones: int = 0
-    NumHitboxes: int = 0
+    NumMaterials: int
+    NumShapes: int
+    NumUVs: int
+    NumBones: int
+    NumHitboxes: int
 
     Vertices: list[list[float]]
     Faces: list[list[int]]
-    Normals: list[list[float]] | None = None
-    Tangents: list[list[float]] | None = None
-    Materials: list[int] | None = None
-    MaterialNames: list[str] | None = None
-    Bones: list[tuple[str, int, Quaternion, Vector]] | None = None
-    Weights: list[tuple[int, int, float]] | None = None
-    Colors: list[list[float]] | None = None
+    Normals: list[list[float]] | None
+    Tangents: list[list[float]] | None
+    Materials: list[int] | None
+    MaterialNames: list[str] | None
+    Bones: list[tuple[str, int, Quaternion, Vector]] | None
+    Weights: list[tuple[int, int, float]] | None
+    Colors: list[list[float]] | None
     UVs: list[list[float]]
     ShapeKeys: dict[str, list[float]]
     Physics: list[tuple[str, PhysicsShape, Vector, Quaternion, Vector]]
@@ -74,22 +74,45 @@ class Mesh:
     NPPoints: ndarray
     NPWedges: ndarray
     NPFaces: ndarray
-    NPNormals: ndarray | None = None
-    NPTangents: ndarray | None = None
-    NPMaterials: ndarray | None = None
-    NPBones: ndarray | None = None
-    NPWeights: ndarray | None = None
-    NPColors: ndarray | None = None
+    NPNormals: ndarray | None
+    NPTangents: ndarray | None
+    NPMaterials: ndarray | None
+    NPBones: ndarray | None
+    NPWeights: ndarray | None
+    NPColors: ndarray | None
     NPUVs: list[ndarray]
     NPShapeKeys: list[ndarray]
-    NPShapeNames: ndarray | None = None
-    NPPhysics: ndarray | None = None
+    NPShapeNames: ndarray | None
+    NPPhysics: ndarray | None
 
     def __init__(self):
+        self.NumMaterials = 0
+        self.NumShapes = 0
+        self.NumUVs = 0
+        self.NumBones = 0
+        self.NumHitboxes = 0
+
+        self.Normals = None
+        self.Tangents = None
+        self.Materials = None
+        self.MaterialNames = None
+        self.Bones = None
+        self.Weights = None
+        self.Colors = None
         self.UVs = list()
         self.ShapeKeys = list()
+        self.Physics = None
+
+        self.NPNormals = None
+        self.NPTangents = None
+        self.NPMaterials = None
+        self.NPBones = None
+        self.NPWeights = None
+        self.NPColors = None
         self.NPUVs = list()
         self.NPShapeKeys = list()
+        self.NPShapeNames = None
+        self.NPPhysics = None
 
     def __setitem__(self, key: str, value: ndarray):
         if key == 'PNTS0000':
