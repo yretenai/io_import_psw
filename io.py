@@ -64,7 +64,7 @@ class Mesh:
     Tangents: list[list[float]] | None
     Materials: list[int] | None
     MaterialNames: list[str] | None
-    Bones: list[tuple[str, int, Quaternion, Vector]] | None
+    Bones: list[tuple[str, int, Quaternion, Vector, Vector]] | None
     Weights: list[tuple[int, int, float]] | None
     Colors: list[list[float]] | None
     UVs: list[list[float]]
@@ -188,7 +188,7 @@ class Mesh:
             self.NumBones = len(self.NPBones)
             self.Bones = [None] * self.NumBones
             for bone_id, (bone_name, flags, num_children, parent_id, rot, pos, length, scale) in enumerate(self.NPBones):
-                self.Bones[bone_id] = (fix_string_np(bone_name), parent_id, Quaternion((rot[3], rot[0], rot[1], rot[2])), Vector((pos[0], pos[1], pos[2])) * resize_by)
+                self.Bones[bone_id] = (fix_string_np(bone_name), parent_id, Quaternion((rot[3], rot[0], rot[1], rot[2])), Vector((pos[0], pos[1], pos[2])) * resize_by, Vector((scale[0], scale[1], scale[2])) * resize_by)
 
             self.Weights = self.NPWeights.tolist()
 
@@ -227,34 +227,76 @@ class Mesh:
 
 class Animation:
     TYPE: DataType = DataType.Animation
-    Name: str
-    Group: str
-    TotalBones: int
-    RootIncluded: bool
-    CompressionStyle: bool
-    Quotum: float
-    Reduce: float
-    Duration: float
-    FrameRate: float
-    StartBone: int
-    FirstFrame: int
-    NumFrames: int
-    Bones: ndarray | None = None
-    Keys: ndarray | None = None
-    ScaleKeys: ndarray | None = None
+
+    NumSequences: int
+    NumBones: int
+    NumKeys: int
+    NumScaleKeys: int
+
+    Sequences: list[tuple[str, str, int, int, float]] | None
+    Bones: list[tuple[str, int, Quaternion, Vector, Vector]] | None
+    Keys: list[tuple[float, Vector, Quaternion]] | None
+    ScaleKeys: list[Vector] | None
+
+    NPSequences: ndarray | None
+    NPBones: ndarray | None
+    NPKeys: ndarray | None
+    NPScaleKeys: ndarray | None
+
+    def __init__(self):
+        self.NumSequences = 0
+        self.NumBones = 0
+        self.NumKeys = 0
+        self.NumScaleKeys = 0
+
+        self.Sequences = None
+        self.Bones = None
+        self.Keys = None
+        self.ScaleKeys = None
+
+        self.NPSequences = None
+        self.NPBones = None
+        self.NPKeys = None
+        self.NPScaleKeys = None
 
     def __setitem__(self, key: str, value: ndarray):
         if key == 'ANIMINFO':
-            (self.Name, self.Group, self.TotalBones, self.RootIncluded, self.CompressionStyle, self.Quotum, self.Reduce, self.Duration, self.FrameRate, self.StartBone, self.FirstFrame, self.NumFrames) = value[0]
-            self.Name = fix_string_np(self.Name)
-            self.Group = fix_string_np(self.Group)
-            self.RootIncluded = self.RootIncluded == 1
+            self.NPSequences = value
         elif key == 'REFSKELT' or key == 'REFSKEL0' or key == 'BONENAMES':
-            self.Bones = value
+            self.NPBones = value
         elif key == 'ANIMKEYS':
-            self.Keys = value
+            self.NPKeys = value
         elif key == 'SCALEKEYS':
-            self.ScaleKeys = value
+            self.NPScaleKeys = value
+
+    def finalize(self, settings: dict[str, Property]):
+        resize_by: float = settings['resize_by'] if 'resize_by' in settings else 0.01
+
+        if self.NPSequences is not None:
+            self.NumSequences = len(self.NPSequences)
+            self.Sequences = [None] * self.NumSequences
+            for sequence_id, (name, group, total_bones, rooted, compression_style, quotum, reduction, duration, framerate, first_bone, first_frame, raw_frames) in enumerate(self.NPSequences):
+                self.Sequences[sequence_id] = (fix_string_np(name), fix_string_np(group), total_bones, raw_frames, framerate)
+
+        if self.NPBones is not None:
+            self.NumBones = len(self.NPBones)
+            self.Bones = [None] * self.NumBones
+            for bone_id, (bone_name, flags, num_children, parent_id, rot, pos, length, scale) in enumerate(self.NPBones):
+                self.Bones[bone_id] = (fix_string_np(bone_name), parent_id, Quaternion((rot[3], rot[0], rot[1], rot[2])), Vector((pos[0], pos[1], pos[2])) * resize_by, Vector((scale[0], scale[1], scale[2])) * resize_by)
+
+        if self.NPKeys is not None:
+            self.NumKeys = len(self.NPKeys)
+            self.Keys = [None] * self.NumKeys
+
+            for key_id, (pos, rot, time) in enumerate(self.NPKeys.tolist()):
+                self.Keys[key_id] = (time, Vector(pos) * resize_by, Quaternion((rot[3], rot[0], rot[1], rot[2])))
+
+        if self.NPScaleKeys is not None:
+            self.NumScaleKeys = len(self.NPScaleKeys)
+            self.ScaleKeys = [None] * self.NumScaleKeys
+
+            for key_id, (scale, time) in enumerate(self.NPScaleKeys.tolist()):
+                self.ScaleKeys[key_id] = Vector(scale) * resize_by
 
 
 def read_chunk(stream: typing.BinaryIO) -> tuple[ndarray | None, str]:

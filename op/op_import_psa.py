@@ -12,7 +12,7 @@ class op_import_psa(Operator, ImportHelper):
     bl_label = 'Import ActorX PSA'
     bl_options = {'REGISTER', 'UNDO'}
 
-    filter_glob: StringProperty(default='*.a', options={'HIDDEN'})
+    filter_glob: StringProperty(default='*.psa', options={'HIDDEN'})
 
     files: CollectionProperty(
             name='File Path',

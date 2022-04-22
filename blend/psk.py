@@ -45,7 +45,7 @@ class ActorXMesh:
             vertex_groups: list[VertexGroup] = [None] * len(self.psk.Bones)
             (armature_data, armature_obj) = self.import_armature(context, self.name, self.psk.Bones)
 
-            for bone_id, (bone_name, _, _, _) in enumerate(self.psk.Bones):
+            for bone_id, (bone_name, _, _, _, _) in enumerate(self.psk.Bones):
                 if len(bone_name) > 63:
                     bone_name = '%s:%d' % (bone_name[:57], bone_id)
                 vertex_groups[bone_id] = mesh_obj.vertex_groups.new(name=bone_name)
@@ -111,7 +111,7 @@ class ActorXMesh:
         return {'FINISHED'}
 
     @staticmethod
-    def import_armature(context: Context, name: str, bones: list[tuple[str, int, Quaternion, Vector]]) -> set[Armature, Object]:
+    def import_armature(context: Context, name: str, bones: list[tuple[str, int, Quaternion, Vector, Vector]]) -> set[Armature, Object]:
         armature_data: Armature = bpy.data.armatures.new(name + ' Armature')
         armature_obj: Object = bpy.data.objects.new(armature_data.name, armature_data)
         context.collection.objects.link(armature_obj)
@@ -127,19 +127,27 @@ class ActorXMesh:
         edit_bones: list[EditBone] = [None] * len(bones)
         bone_matrices: List[Matrix] = [None] * len(bones)
 
-        for bone_id, (bone_name, parent_id, bone_rot, bone_pos) in enumerate(bones):
+        for bone_id, (bone_name, parent_id, bone_rot, bone_pos, bone_scale) in enumerate(bones):
             orig_bone_name: str = bone_name
             if len(bone_name) > 63:
                 bone_name = '%s:%d' % (bone_name[:57], bone_id)
             edit_bone: EditBone = armature_data.edit_bones.new(bone_name)
             edit_bones[bone_id] = edit_bone
-            edit_bone['full_bone_name'] = orig_bone_name
+            edit_bone['actorx:full_bone_name'] = orig_bone_name
             edit_bone.tail = Vector((0.0, 0.001, 0.0))
 
             if parent_id == -1:
                 bone_rot.conjugate()
 
-            bone_matrix: Matrix = Matrix.Translation(bone_pos) @ bone_rot.conjugated().to_matrix().to_4x4()
+            if bone_scale.length == 0.0:
+                bone_scale = Vector((1, 1, 1))
+
+            scale_matrix: Matrix = Matrix(((bone_scale.x, 0.0, 0.0, 0.0),
+                                           (0.0, bone_scale.y, 0.0, 0.0),
+                                           (0.0, 0.0, bone_scale.z, 0.0),
+                                           (0.0, 0.0, 0.0, 1.0)))
+
+            bone_matrix: Matrix = Matrix.Translation(bone_pos) @ bone_rot.conjugated().to_matrix().to_4x4() @ scale_matrix
 
             if parent_id > -1:
                 edit_bone.parent = edit_bones[parent_id]
@@ -148,8 +156,9 @@ class ActorXMesh:
             bone_matrices[bone_id] = bone_matrix
             edit_bone.matrix = bone_matrix
 
-            edit_bone['bind_rest_rot'] = bone_rot.copy()
-            edit_bone['bind_rest_pos'] = bone_pos.copy()
+            edit_bone['actorx:bind_rest_rot'] = bone_rot.copy()
+            edit_bone['actorx:bind_rest_pos'] = bone_pos.copy()
+            edit_bone['actorx:bind_rest_scale'] = bone_scale.copy()
 
         utils.set_mode('OBJECT')
 
