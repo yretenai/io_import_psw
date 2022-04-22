@@ -1,38 +1,37 @@
-from bpy.types import Property
+import typing
 from enum import Enum
+from struct import unpack
+
+import numpy
+from bpy.types import Property
 from io_import_pskx.utils import fix_string_np, fix_string
 from mathutils import Quaternion, Vector
 from numpy import dtype, ndarray
 from numpy.typing import DTypeLike
-from struct import unpack
-
-import numpy
-import typing
 
 
 dispatch: dict[str, DTypeLike] = {
-    # name    : [[ format      ), multiple]
-    'PNTS0000': dtype([('xyz', '3f')]),
-    'VTXW0000': dtype([('vertex_id', 'I'), ('uv', '2f'), ('mat_id', 'B')], align=True),
-    'VTXW3200': dtype([('vertex_id', 'I'), ('uv', '2f'), ('mat_id', 'B')], align=True),
-    'FACE0000': dtype([('abc', '3H'), ('mat_id', 'B'), ('aux_mat_id', 'B'), ('group', 'I')]),
-    'FACE3200': dtype([('abc', '3I'), ('mat_id', 'B'), ('aux_mat_id', 'B'), ('group', 'I')]),
-    'VTXNORMS': dtype([('xyz', '3f')]),
-    'VTXTANGS': dtype([('xyzw', '4f')]),
-    'MATT0000': dtype([('name', '64b'), ('tex_id', 'i'), ('poly_flags', 'I'), ('aux_mat_id', 'i'), ('aux_flags', 'I'), ('lod_bias', 'i'), ('lod_style', 'i')]),
-    'REFSKELT': dtype([('name', '64b'), ('flags', 'I'), ('num_children', 'i'), ('parent_id', 'i'), ('rot', '4f'), ('pos', '3f'), ('length', 'f'), ('scale', '3f')]),
-    'REFSKEL0': dtype([('name', '64b'), ('flags', 'I'), ('num_children', 'i'), ('parent_id', 'i'), ('rot', '4f'), ('pos', '3f'), ('length', 'f'), ('scale', '3f')]),
-    'BONENAMES': dtype([('name', '64b'), ('flags', 'I'), ('num_children', 'i'), ('parent_id', 'i'), ('rot', '4f'), ('pos', '3f'), ('length', 'f'), ('scale', '3f')]),
-    'RAWWEIGHTS': dtype([('weight', 'f'), ('vertex_id', 'i'), ('bone_id', 'i')]),
-    'RAWW0000': dtype([('weight', 'f'), ('vertex_id', 'i'), ('bone_id', 'i')]),
-    'VERTEXCOLOR': dtype([('rgba', '4B')]),
-    'EXTRAUVS': dtype([('uv', '2f')]),
-    'MORPHTARGET': dtype([('vertex_id', 'i'), ('xyz', '3f')]),
-    'MORPHNAMES': dtype([('name', '64b')]),
-    'PHYSICS0': dtype([('name', '64b'), ('type', 'B'), ('center', '3f'), ('rot', '3f'), ('scale', '3f')]),
-    'ANIMINFO': dtype([('name', '64b'), ('group', '64b'), ('total_bones', 'i'), ('root_included', 'i'), ('key_compression_style', 'i'), ('key_quotum', 'i'), ('key_reduction', 'f'), ('duration', 'f'), ('frame_rate', 'f'), ('start_bone', 'i'), ('first_frame', 'i'), ('num_frames', 'i')]),
-    'ANIMKEYS': dtype([('pos', '3f'), ('rot', '4f'), ('time', 'f')]),
-    'SCALEKEYS': dtype([('scale', '3f'), ('time', 'f')]),
+        'PNTS0000':    dtype([('xyz', '3f')]),
+        'VTXW0000':    dtype([('vertex_id', 'I'), ('uv', '2f'), ('mat_id', 'B')], align=True),
+        'VTXW3200':    dtype([('vertex_id', 'I'), ('uv', '2f'), ('mat_id', 'B')], align=True),
+        'FACE0000':    dtype([('abc', '3H'), ('mat_id', 'B'), ('aux_mat_id', 'B'), ('group', 'I')]),
+        'FACE3200':    dtype([('abc', '3I'), ('mat_id', 'B'), ('aux_mat_id', 'B'), ('group', 'I')]),
+        'VTXNORMS':    dtype([('xyz', '3f')]),
+        'VTXTANGS':    dtype([('xyzw', '4f')]),
+        'MATT0000':    dtype([('name', '64b'), ('tex_id', 'i'), ('poly_flags', 'I'), ('aux_mat_id', 'i'), ('aux_flags', 'I'), ('lod_bias', 'i'), ('lod_style', 'i')]),
+        'REFSKELT':    dtype([('name', '64b'), ('flags', 'I'), ('num_children', 'i'), ('parent_id', 'i'), ('rot', '4f'), ('pos', '3f'), ('length', 'f'), ('scale', '3f')]),
+        'REFSKEL0':    dtype([('name', '64b'), ('flags', 'I'), ('num_children', 'i'), ('parent_id', 'i'), ('rot', '4f'), ('pos', '3f'), ('length', 'f'), ('scale', '3f')]),
+        'BONENAMES':   dtype([('name', '64b'), ('flags', 'I'), ('num_children', 'i'), ('parent_id', 'i'), ('rot', '4f'), ('pos', '3f'), ('length', 'f'), ('scale', '3f')]),
+        'RAWWEIGHTS':  dtype([('weight', 'f'), ('vertex_id', 'i'), ('bone_id', 'i')]),
+        'RAWW0000':    dtype([('weight', 'f'), ('vertex_id', 'i'), ('bone_id', 'i')]),
+        'VERTEXCOLOR': dtype([('rgba', '4B')]),
+        'EXTRAUVS':    dtype([('uv', '2f')]),
+        'MORPHTARGET': dtype([('vertex_id', 'i'), ('xyz', '3f')]),
+        'MORPHNAMES':  dtype([('name', '64b')]),
+        'PHYSICS0':    dtype([('name', '64b'), ('type', 'B'), ('center', '3f'), ('rot', '3f'), ('scale', '3f')]),
+        'ANIMINFO':    dtype([('name', '64b'), ('group', '64b'), ('total_bones', 'i'), ('root_included', 'i'), ('key_compression_style', 'i'), ('key_quotum', 'i'), ('key_reduction', 'f'), ('duration', 'f'), ('frame_rate', 'f'), ('start_bone', 'i'), ('first_frame', 'i'), ('num_frames', 'i')]),
+        'ANIMKEYS':    dtype([('pos', '3f'), ('rot', '4f'), ('time', 'f')]),
+        'SCALEKEYS':   dtype([('scale', '3f'), ('time', 'f')]),
 }
 
 
@@ -163,7 +162,7 @@ class Mesh:
                 self.Bones[bone_id] = (fix_string_np(bone_name), parent_id, Quaternion((rot[3], rot[0], rot[1], rot[2])), Vector((pos[0], pos[1], pos[2])) * resize_by)
 
             self.Weights = self.NPWeights.tolist()
-                
+
         if self.NPColors is not None:
             self.Colors = [None] * self.NumFaces * 3
             NPColorsFloat = (self.NPColors['rgba'] / 0xff).tolist()
@@ -193,8 +192,8 @@ class Mesh:
                     self.ShapeKeys[shape_name][int(vertex_id)] = shape_delta
 
         # if self.NPPhysics is not None:
-            # self.NumHitboxes = len(self.NPPhysics)
-            # todo(naomi): physics
+        # self.NumHitboxes = len(self.NPPhysics)
+        # todo(naomi): physics
 
 
 class Animation:
@@ -237,7 +236,7 @@ def read_chunk(stream: typing.BinaryIO) -> tuple[ndarray | None, str]:
 
     for chunk_key in dispatch.keys():
         if chunk_key == chunk_id or chunk_id.startswith(chunk_key):
-            return (numpy.fromfile(stream, dtype=dispatch[chunk_key], count=chunk_count),  chunk_id)
+            return (numpy.fromfile(stream, dtype=dispatch[chunk_key], count=chunk_count), chunk_id)
 
     print('No parser found for %s!' % (chunk_id))
 

@@ -1,7 +1,6 @@
 import bpy
-from bpy.types import Context, Object
-
 import numpy
+from bpy.types import Context, Object
 from numpy import ndarray
 
 

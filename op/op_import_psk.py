@@ -1,10 +1,10 @@
+from typing import Union, Set
+
+import bpy
 from bpy.props import StringProperty, CollectionProperty, FloatProperty
 from bpy.types import Operator, Context, Property, OperatorFileListElement, TOPBAR_MT_file_import
 from bpy_extras.io_utils import ImportHelper
 from io_import_pskx.blend.psk import ActorXMesh
-from typing import Union, Set
-
-import bpy
 
 
 class op_import_psk(Operator, ImportHelper):
@@ -15,15 +15,15 @@ class op_import_psk(Operator, ImportHelper):
     filter_glob: StringProperty(default='*.psk;*.pskx', options={'HIDDEN'})
 
     files: CollectionProperty(
-        name='File Path',
-        type=OperatorFileListElement,
+            name='File Path',
+            type=OperatorFileListElement,
     )
 
     resize_by: FloatProperty(
-        name='Resize By',
-        default=0.01,
-        min=0.01,
-        soft_max=10.0
+            name='Resize By',
+            default=0.01,
+            min=0.01,
+            soft_max=10.0
     )
 
     def draw(self, context: Context):

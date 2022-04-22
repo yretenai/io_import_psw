@@ -1,5 +1,6 @@
 from typing import Any
 
+
 bl_info = {
         'name':        'ActorX PSK/PSA Import',
         'author':      'yrhetenai',

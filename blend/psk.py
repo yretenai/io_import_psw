@@ -1,13 +1,12 @@
-from bpy.types import Property, Context, Armature, Object, Material, EditBone, MeshUVLoopLayer, MeshLoopColorLayer, VertexGroup, ArmatureModifier, ShapeKey
-from io_import_pskx.io import read_actorx, Mesh
-from mathutils import Quaternion, Vector, Matrix
-from numpy import ndarray
+import itertools
 from os.path import basename, splitext
 
 import bpy.types
 import io_import_pskx.utils as utils
-import itertools
 import numpy
+from bpy.types import Property, Context, Armature, Object, EditBone, MeshUVLoopLayer, MeshLoopColorLayer, VertexGroup, ArmatureModifier, ShapeKey
+from io_import_pskx.io import read_actorx, Mesh
+from mathutils import Quaternion, Vector, Matrix
 
 
 class ActorXMesh:
