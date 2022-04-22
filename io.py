@@ -67,8 +67,8 @@ class Mesh:
     Bones: list[tuple[str, int, Quaternion, Vector]] | None = None
     Weights: list[tuple[int, int, float]] | None = None
     Colors: list[list[float]] | None = None
-    UVs: list[list[float]] = list()
-    ShapeKeys: dict[str, list[float]] = dict()
+    UVs: list[list[float]]
+    ShapeKeys: dict[str, list[float]]
     Physics: list[tuple[str, PhysicsShape, Vector, Quaternion, Vector]]
 
     NPPoints: ndarray
@@ -80,10 +80,16 @@ class Mesh:
     NPBones: ndarray | None = None
     NPWeights: ndarray | None = None
     NPColors: ndarray | None = None
-    NPUVs: list[ndarray] = list()
-    NPShapeKeys: list[ndarray] = list()
+    NPUVs: list[ndarray]
+    NPShapeKeys: list[ndarray]
     NPShapeNames: ndarray | None = None
     NPPhysics: ndarray | None = None
+
+    def __init__(self):
+        self.UVs = list()
+        self.ShapeKeys = list()
+        self.NPUVs = list()
+        self.NPShapeKeys = list()
 
     def __setitem__(self, key: str, value: ndarray):
         if key == 'PNTS0000':
