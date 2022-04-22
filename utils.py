@@ -31,6 +31,6 @@ def set_active(context: Context, obj: Object) -> None:
     context.view_layer.objects.active = obj
 
 
-def set_mode(mode: str):
+def set_mode(mode: str) -> None:
     if bpy.ops.object.mode_set.poll():
         bpy.ops.object.mode_set(mode=mode, toggle=False)

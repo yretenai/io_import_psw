@@ -1,10 +1,10 @@
-from typing import Union, Set
-
-import bpy
 from bpy.props import StringProperty, CollectionProperty, FloatProperty
 from bpy.types import Operator, Context, Property, OperatorFileListElement, TOPBAR_MT_file_import
 from bpy_extras.io_utils import ImportHelper
 from io_import_pskx.blend.psk import ActorXMesh
+from typing import Union, Set
+
+import bpy
 
 
 class op_import_psk(Operator, ImportHelper):

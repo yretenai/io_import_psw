@@ -1,17 +1,19 @@
-import bpy.types
-from bpy.types import Property, Context, Armature, Object, Material, EditBone
-from mathutils import Quaternion, Vector, Matrix
-
-from os.path import basename, splitext
-from numpy import ndarray
-
-import io_import_pskx.utils as utils
+from bpy.types import Property, Context, Armature, Object, Material, EditBone, MeshUVLoopLayer, MeshLoopColorLayer, VertexGroup, ArmatureModifier, ShapeKey
 from io_import_pskx.io import read_actorx, Mesh
+from mathutils import Quaternion, Vector, Matrix
+from numpy import ndarray
+from os.path import basename, splitext
+
+import bpy.types
+import io_import_pskx.utils as utils
+import itertools
+import numpy
 
 
 class ActorXMesh:
     path: str
     settings: dict[str, Property]
+    resize_mod: float
     psk: Mesh | None
     name: str
 
@@ -19,11 +21,12 @@ class ActorXMesh:
         self.path = path
         self.name = splitext(basename(path))[0]
         self.settings = settings
+        self.resize_mod = self.settings['resize_by']
+
         with open(self.path, 'rb') as stream:
-            self.psk = read_actorx(stream)
+            self.psk = read_actorx(stream, settings)
 
     def execute(self, context: Context) -> set[str]:
-        resize_mod: float = self.settings['resize_by']
 
         utils.select_all('DESELECT')
 
@@ -31,26 +34,85 @@ class ActorXMesh:
         mesh_obj: Object = bpy.data.objects.new(mesh_data.name, mesh_data)
         context.collection.objects.link(mesh_obj)
 
-        has_armature: bool = self.psk.Bones is not None
+        has_armature: bool = self.psk.Bones is not None and self.psk.Weights is not None
         armature_data: Armature | None = None
         armature_obj: Object | None = None
 
-        materials: list[Material] = []
-        for material in self.psk.Materials:
-            material_name = utils.fix_string_np(material['name'])
+        for material_name in self.psk.MaterialNames:
             material_data = bpy.data.materials.get(material_name) or bpy.data.materials.new(material_name)
-            materials.append(material_data)
             mesh_data.materials.append(material_data)
 
         if has_armature:
-            (armature_data, armature_obj) = self.import_armature(context, self.name, self.psk.Bones, resize_mod)
+            vertex_groups: list[VertexGroup] = [None] * len(self.psk.Bones)
+            (armature_data, armature_obj) = self.import_armature(context, self.name, self.psk.Bones)
+
+            for bone_id, (bone_name, _, _, _) in enumerate(self.psk.Bones):
+                if len(bone_name) > 63:
+                    bone_name = '%s:%d' % (bone_name[:57], bone_id)
+                vertex_groups[bone_id] = mesh_obj.vertex_groups.new(name=bone_name)
+
+            mesh_obj.parent = armature_obj
+            mesh_obj.parent_type = 'OBJECT'
 
         utils.select_all('DESELECT')
+
+        mesh_data.from_pydata(self.psk.Vertices, [], self.psk.Faces)
+
+        mesh_data.polygons.foreach_set('material_index', self.psk.Materials)
+
+        if self.psk.Normals is not None:
+            mesh_data.polygons.foreach_set('use_smooth', numpy.full(self.psk.NumFaces, True))
+            mesh_data.normals_split_custom_set_from_vertices(self.psk.Normals)
+            mesh_data.use_auto_smooth = True
+
+        if self.psk.Colors is not None:
+            color_layer: MeshLoopColorLayer = mesh_data.vertex_colors.new(name='Color', do_init=False)
+            color_layer.data.foreach_set('color', list(itertools.chain.from_iterable(self.psk.Colors)))
+
+        for uv_id, uv_data in enumerate(self.psk.UVs):
+            name: str = 'UV' if uv_id == 0 else 'UV_%03d' % uv_id
+            uv_layer: MeshUVLoopLayer = mesh_data.uv_layers.new(name=name)
+            if uv_layer is None:
+                break
+
+            uv_layer.data.foreach_set('uv', list(itertools.chain.from_iterable(uv_data)))
+
+        if self.psk.NumShapes > 0:
+            shape_basis: ShapeKey = mesh_obj.shape_key_add(name='Basis', from_mix=False)
+            shape_basis.interpolation = 'KEY_LINEAR'
+            mesh_data.shape_keys.use_relative = True
+
+            for shape_name, shape_data in self.psk.ShapeKeys.items():
+                shape = mesh_obj.shape_key_add(name=shape_name, from_mix=False)
+                shape.interpolation = 'KEY_LINEAR'
+                shape.relative_key = shape_basis
+                shape.data.foreach_set('co', list(itertools.chain.from_iterable(shape_data)))
+
+        mesh_data.validate()
+        mesh_data.update()
+
+        utils.select_all('DESELECT')
+
+        if has_armature:
+            for weight, vertex_id, bone_id in self.psk.Weights:
+                vertex_groups[bone_id].add((vertex_id,), weight, 'ADD')
+
+            armature_modifier: ArmatureModifier = mesh_obj.modifiers.new(armature_obj.data.name, type='ARMATURE')
+            armature_modifier.show_expanded = False
+            armature_modifier.use_vertex_groups = True
+            armature_modifier.use_bone_envelopes = False
+            armature_modifier.object = armature_obj
+
+            utils.select_set(context, armature_obj, True)
+            utils.set_active(context, armature_obj)
+        else:
+            utils.select_set(context, mesh_obj, True)
+            utils.set_active(context, mesh_obj)
 
         return {'FINISHED'}
 
     @staticmethod
-    def import_armature(context: Context, name: str, bones: ndarray, resize_mod: float) -> set[Armature, Object]:
+    def import_armature(context: Context, name: str, bones: list[tuple[str, int, Quaternion, Vector]]) -> set[Armature, Object]:
         armature_data: Armature = bpy.data.armatures.new(name + ' Armature')
         armature_obj: Object = bpy.data.objects.new(armature_data.name, armature_data)
         context.collection.objects.link(armature_obj)
@@ -66,26 +128,14 @@ class ActorXMesh:
         edit_bones: list[EditBone] = [None] * len(bones)
         bone_matrices: List[Matrix] = [None] * len(bones)
 
-        for bone_id, bone in enumerate(bones):
-            bone_name: str = utils.fix_string_np(bone['name'])
+        for bone_id, (bone_name, parent_id, bone_rot, bone_pos) in enumerate(bones):
             orig_bone_name: str = bone_name
             if len(bone_name) > 63:
-                bone_name = '%s:%d' % (bone[:57], bone_id)
+                bone_name = '%s:%d' % (bone_name[:57], bone_id)
             edit_bone: EditBone = armature_data.edit_bones.new(bone_name)
             edit_bones[bone_id] = edit_bone
             edit_bone['full_bone_name'] = orig_bone_name
-
-            bone_length: float = bone['length']
-
-            if bone_length < 0.01:
-                bone_length = 0.5
-
-            edit_bone.tail = Vector((0.0, bone_length, 0.0))
-
-            parent_id: int = bone['parent_id']
-
-            bone_rot: Quaternion = Quaternion((bone['rot'][3], bone['rot'][0], bone['rot'][1], bone['rot'][2]))
-            bone_pos: Vector = Vector(bone['pos']) * resize_mod
+            edit_bone.tail = Vector((0.0, 0.001, 0.0))
 
             if parent_id == -1:
                 bone_rot.conjugate()

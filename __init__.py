@@ -15,8 +15,9 @@ bl_info = {
 
 
 def reload_package(module_dict_main: dict[str, Any]) -> None:
-    import importlib
     from pathlib import Path
+
+    import importlib
 
     def reload_package_recursive(current_dir: str, module_dict: dict[str, Any]):
         for path in current_dir.iterdir():
