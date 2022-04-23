@@ -32,7 +32,9 @@ A lot of functionality in this addon is non-standard, such as the inclusion of c
 
 These are implemented in my fork of [CUE4Parse](https://github.colm/yretenai/CUE4Parse), as of right now neither UModel or FModel support these new chunks.
 
-This library has only been tested in the output of the modified library, of which the mesh exporter has undergone significant changes to replicate Gltf exporting behavior and to accomodate for morph targets.
+This addon has **only** been tested in the output of the modified library, of which the mesh exporter has undergone significant changes to replicate Gltf exporting behavior and to accomodate for morph targets. 
+
+I do not plan or expect for official libraries to support these changes, nor will I support the output files from "normal" programs.
 
 ## Outline of format-level changes
 
@@ -76,7 +78,7 @@ Single Chunk.
 
 Lists sequences present in the file, along with it's projected frame rate.
 
-### PSA - ROTTRACK
+### PSA - ROTTRACK#:#
 
 Repeated chunk with different suffixes, different to EXTRAUVS.
 
@@ -86,7 +88,7 @@ Suffix indicates both the sequence and bone index: `ROTTRACK[SEQUENCEID]:[BONEID
 
 Rotation keyframes for each sequence, bone and point in time. Will be interpolated linearly by Blender.
 
-### PSA - POSTRACK
+### PSA - POSTRACK#:#
 
 Repeated chunk with different suffixes, different to EXTRAUVS.
 
