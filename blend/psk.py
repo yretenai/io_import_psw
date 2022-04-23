@@ -31,8 +31,6 @@ class ActorXMesh:
         if self.psk is None or self.psk.TYPE != DataType.Mesh:
             return {'CANCELLED'}
 
-        utils.select_all('DESELECT')
-
         mesh_data: Mesh = bpy.data.meshes.new(self.name)
         mesh_obj: Object = bpy.data.objects.new(mesh_data.name, mesh_data)
         context.view_layer.active_layer_collection.collection.objects.link(mesh_obj)
@@ -58,8 +56,6 @@ class ActorXMesh:
 
             mesh_obj.parent = armature_obj
             mesh_obj.parent_type = 'OBJECT'
-
-        utils.select_all('DESELECT')
 
         mesh_data.from_pydata(self.psk.Vertices, [], self.psk.Faces)
 
@@ -96,8 +92,6 @@ class ActorXMesh:
         mesh_data.validate()
         mesh_data.update()
 
-        utils.select_all('DESELECT')
-
         if has_armature:
             for weight, vertex_id, bone_id in self.psk.Weights:
                 vertex_groups[bone_id].add((vertex_id,), weight, 'ADD')
@@ -107,12 +101,6 @@ class ActorXMesh:
             armature_modifier.use_vertex_groups = True
             armature_modifier.use_bone_envelopes = False
             armature_modifier.object = armature_obj
-
-            utils.select_set(context, armature_obj, True)
-            utils.set_active(context, armature_obj)
-        else:
-            utils.select_set(context, mesh_obj, True)
-            utils.set_active(context, mesh_obj)
 
         return {'FINISHED'}
 
@@ -126,9 +114,8 @@ class ActorXMesh:
         armature_data.display_type = 'STICK'
         armature_obj.show_in_front = True
 
-        utils.select_set(context, armature_obj, True)
-        utils.set_active(context, armature_obj)
-        utils.set_mode('EDIT')
+        context.view_layer.objects.active = armature_obj
+        bpy.ops.object.mode_set('EDIT', toggle=False)
 
         edit_bones: list[EditBone] = [None] * len(bones)
         bone_matrices: List[Matrix] = [None] * len(bones)
@@ -157,6 +144,6 @@ class ActorXMesh:
             edit_bone['actorx:bind_rest_rot'] = bone_rot.copy()
             edit_bone['actorx:bind_rest_pos'] = bone_pos.copy()
 
-        utils.set_mode('OBJECT')
+        bpy.ops.object.mode_set('OBJECT', toggle=false)
 
         return (armature_data, armature_obj)

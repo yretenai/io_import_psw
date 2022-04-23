@@ -34,8 +34,6 @@ class ActorXWorld:
         if len(self.game_dir) == 0:
             return {'CANCELLED'}
 
-        utils.select_all('DESELECT')
-
         world_collection = bpy.data.collections.new(self.name)
         context.collection.children.link(world_collection)
         world_layer = context.view_layer.active_layer_collection.children[-1]
