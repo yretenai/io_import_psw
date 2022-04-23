@@ -2,8 +2,8 @@ from typing import Any
 
 
 bl_info = {
-        'name':        'ActorX PSK/PSA Import',
-        'author':      'yrhetenai',
+        'name':        'Import ActorX Mesh/Animations (.psk, .psa)',
+        'author':      'yretenai',
         'version':     (1, 0, 0),
         'blender':     (3, 0, 0),
         'location':    'File > Import > PSK',
