@@ -17,7 +17,7 @@ Alternatively copy the repository directory into your Blender Addons folder:
 - `~/.config/blender/3.0/scripts/addons` on Linux-based systems.
 - `~/Library/Application Support/Blender/3.0/scripts/addons` on macOS.
 
-The folder may not exist, if so you should create it. The `3.0` may be a different number. 
+The folder may not exist, if so you should create it. The `3.0` may be a different number.
 
 - In the Addons Preferences window again, click refresh if you manually copied the folder.
 - Search `Import ActorX`, click the checkbox to the left of the name.
@@ -28,13 +28,17 @@ To import a PSK or PSA file, use the appropriate importer from `File -> Import -
 
 ## Notice
 
-A lot of functionality in this addon is non-standard, such as the inclusion of custom chunks like `MORPHTARGET` and the custom `ANIXHEAD` animation format. These are described below.
+A lot of functionality in this addon is non-standard, such as the inclusion of custom chunks like `MORPHTARGET` and the
+custom `ANIXHEAD` animation format. These are described below.
 
-These are implemented in my fork of [CUE4Parse](https://github.colm/yretenai/CUE4Parse), as of right now neither UModel or FModel support these new chunks.
+These are implemented in my fork of [CUE4Parse](https://github.colm/yretenai/CUE4Parse), as of right now neither UModel
+or FModel support these new chunks.
 
-This addon has **only** been tested in the output of the modified library, of which the mesh exporter has undergone significant changes to replicate Gltf exporting behavior and to accomodate for morph targets. 
+This addon has **only** been tested in the output of the modified library, of which the mesh exporter has undergone
+significant changes to replicate Gltf exporting behavior and to accomodate for morph targets.
 
-I do not plan or expect for official libraries to support these changes, nor will I support the output files from "normal" programs.
+I do not plan or expect for official libraries to support these changes, nor will I support the output files from 
+"normal" programs.
 
 ## Outline of format-level changes
 
@@ -98,11 +102,33 @@ Suffix indicates both the sequence and bone index: `POSTRACK[SEQUENCEID]:[BONEID
 
 Location keyframes for each sequence, bone and point in time. Will be interpolated linearly by Blender.
 
+### PSW - WRLDHEAD
+
+File identifier for psw files
+
+### PSA - WORLDACTORS
+
+Single Chunk.
+
+`368 bytes - char[64] name, char[256] asset_path, int parent, FVector position, FQuaternion rotation, FVector scale, 
+int flags`
+
+Lists actors present in the world.
+
+### PSW - INSTMATERIAL
+
+Single Chunk.
+
+`72 bytes - int actor_id, int material_id char[64] name`
+
+Specifies material overrides for a specific actor.
+
 ## Why an animation format change?
 
-The old format is quite inefficient by duplicating idle keyframes. 
-This leads to ballooned keyframe sizes, along with significant slowdown in Blender when used excessively (i.e. a long animation.)
+The old format is quite inefficient by duplicating idle keyframes. This leads to ballooned keyframe sizes, along with 
+significant slowdown in Blender when used excessively (i.e. a long animation.)
 
-The new format only stores keyframes if they actually change bone data, resulting in a smaller file and a more traditional approach to animations.
+The new format only stores keyframes if they actually change bone data, resulting in a smaller file and a more 
+traditional approach to animations.
 
 This is a breaking change, thus a different magic value is used.

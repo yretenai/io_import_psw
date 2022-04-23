@@ -11,30 +11,32 @@ from numpy.typing import DTypeLike
 
 
 dispatch: dict[str, DTypeLike] = {
-        'PNTS0000':    dtype([('xyz', '3f')]),
-        'VTXW0000':    dtype([('vertex_id', 'I'), ('uv', '2f'), ('mat_id', 'B')], align=True),
-        'VTXW3200':    dtype([('vertex_id', 'I'), ('uv', '2f'), ('mat_id', 'B')], align=True),
-        'FACE0000':    dtype([('abc', '3H'), ('mat_id', 'B'), ('aux_mat_id', 'B'), ('group', 'I')]),
-        'FACE3200':    dtype([('abc', '3I'), ('mat_id', 'B'), ('aux_mat_id', 'B'), ('group', 'I')]),
-        'VTXNORMS':    dtype([('xyz', '3f')]),
-        'VTXTANGS':    dtype([('xyzw', '4f')]),
-        'MATT0000':    dtype([('name', '64b'), ('tex_id', 'i'), ('poly_flags', 'I'), ('aux_mat_id', 'i'), ('aux_flags', 'I'), ('lod_bias', 'i'), ('lod_style', 'i')]),
-        'REFSKELT':    dtype([('name', '64b'), ('flags', 'I'), ('num_children', 'i'), ('parent_id', 'i'), ('rot', '4f'), ('pos', '3f'), ('length', 'f'), ('scale', '3f')]),
-        'REFSKEL0':    dtype([('name', '64b'), ('flags', 'I'), ('num_children', 'i'), ('parent_id', 'i'), ('rot', '4f'), ('pos', '3f'), ('length', 'f'), ('scale', '3f')]),
-        'BONENAMES':   dtype([('name', '64b'), ('flags', 'I'), ('num_children', 'i'), ('parent_id', 'i'), ('rot', '4f'), ('pos', '3f'), ('length', 'f'), ('scale', '3f')]),
-        'RAWWEIGHTS':  dtype([('weight', 'f'), ('vertex_id', 'i'), ('bone_id', 'i')]),
-        'RAWW0000':    dtype([('weight', 'f'), ('vertex_id', 'i'), ('bone_id', 'i')]),
-        'VERTEXCOLOR': dtype([('rgba', '4B')]),
-        'EXTRAUVS':    dtype([('uv', '2f')]),
-        'MORPHTARGET': dtype([('vertex_id', 'i'), ('xyz', '3f')]),
-        'MORPHNAMES':  dtype([('name', '64b')]),
-        'PHYSICS0':    dtype([('name', '64b'), ('type', 'B'), ('center', '3f'), ('rot', '3f'), ('scale', '3f')]),
-        'ANIMINFO':    dtype([('name', '64b'), ('group', '64b'), ('total_bones', 'i'), ('root_included', 'i'), ('key_compression_style', 'i'), ('key_quotum', 'i'), ('key_reduction', 'f'), ('duration', 'f'), ('frame_rate', 'f'), ('start_bone', 'i'), ('first_frame', 'i'), ('num_frames', 'i')]),
-        'ANIMKEYS':    dtype([('pos', '3f'), ('rot', '4f'), ('time', 'f')]),
-        'SCALEKEYS':   dtype([('scale', '3f'), ('time', 'f')]),
-        'SEQUENCES':   dtype([('name', '64b'), ('framerate', 'f')]),
-        'ROTTRACK':    dtype([('time', 'f'), ('xyzw', '4f')]),
-        'POSTRACK':    dtype([('time', 'f'), ('xyz', '3f')]),
+        'PNTS0000':     dtype([('xyz', '3f')]),
+        'VTXW0000':     dtype([('vertex_id', 'I'), ('uv', '2f'), ('mat_id', 'B')], align=True),
+        'VTXW3200':     dtype([('vertex_id', 'I'), ('uv', '2f'), ('mat_id', 'B')], align=True),
+        'FACE0000':     dtype([('abc', '3H'), ('mat_id', 'B'), ('aux_mat_id', 'B'), ('group', 'I')]),
+        'FACE3200':     dtype([('abc', '3I'), ('mat_id', 'B'), ('aux_mat_id', 'B'), ('group', 'I')]),
+        'VTXNORMS':     dtype([('xyz', '3f')]),
+        'VTXTANGS':     dtype([('xyzw', '4f')]),
+        'MATT0000':     dtype([('name', '64b'), ('tex_id', 'i'), ('poly_flags', 'I'), ('aux_mat_id', 'i'), ('aux_flags', 'I'), ('lod_bias', 'i'), ('lod_style', 'i')]),
+        'REFSKELT':     dtype([('name', '64b'), ('flags', 'I'), ('num_children', 'i'), ('parent_id', 'i'), ('rot', '4f'), ('pos', '3f'), ('length', 'f'), ('scale', '3f')]),
+        'REFSKEL0':     dtype([('name', '64b'), ('flags', 'I'), ('num_children', 'i'), ('parent_id', 'i'), ('rot', '4f'), ('pos', '3f'), ('length', 'f'), ('scale', '3f')]),
+        'BONENAMES':    dtype([('name', '64b'), ('flags', 'I'), ('num_children', 'i'), ('parent_id', 'i'), ('rot', '4f'), ('pos', '3f'), ('length', 'f'), ('scale', '3f')]),
+        'RAWWEIGHTS':   dtype([('weight', 'f'), ('vertex_id', 'i'), ('bone_id', 'i')]),
+        'RAWW0000':     dtype([('weight', 'f'), ('vertex_id', 'i'), ('bone_id', 'i')]),
+        'VERTEXCOLOR':  dtype([('rgba', '4B')]),
+        'EXTRAUVS':     dtype([('uv', '2f')]),
+        'MORPHTARGET':  dtype([('vertex_id', 'i'), ('xyz', '3f')]),
+        'MORPHNAMES':   dtype([('name', '64b')]),
+        'PHYSICS0':     dtype([('name', '64b'), ('type', 'B'), ('center', '3f'), ('rot', '3f'), ('scale', '3f')]),
+        'ANIMINFO':     dtype([('name', '64b'), ('group', '64b'), ('total_bones', 'i'), ('root_included', 'i'), ('key_compression_style', 'i'), ('key_quotum', 'i'), ('key_reduction', 'f'), ('duration', 'f'), ('frame_rate', 'f'), ('start_bone', 'i'), ('first_frame', 'i'), ('num_frames', 'i')]),
+        'ANIMKEYS':     dtype([('pos', '3f'), ('rot', '4f'), ('time', 'f')]),
+        'SCALEKEYS':    dtype([('scale', '3f'), ('time', 'f')]),
+        'SEQUENCES':    dtype([('name', '64b'), ('framerate', 'f')]),
+        'ROTTRACK':     dtype([('time', 'f'), ('xyzw', '4f')]),
+        'POSTRACK':     dtype([('time', 'f'), ('xyz', '3f')]),
+        'WORLDACTORS':  dtype([('name', '64b'), ('asset', '256b'), ('parent', 'i'), ('pos', '3f'), ('rot', '4f'), ('scale', '3f'), ('flags', 'i')]),
+        'INSTMATERIAL': dtype([('actor_id', 'i'), ('material_id', 'i'), ('name', '64b')])
 }
 
 
@@ -49,6 +51,7 @@ class DataType(Enum):
     Mesh = 0
     Animation = 1
     AnimationV2 = 2
+    World = 3
 
 
 class Mesh:
@@ -119,6 +122,9 @@ class Mesh:
         self.NPPhysics = None
 
     def __setitem__(self, key: str, value: ndarray):
+        if len(value) == 0:
+            return
+
         if key == 'PNTS0000':
             self.NPPoints = value
         elif key == 'VTXW0000' or key == 'VTXW3200':
@@ -258,6 +264,9 @@ class Animation:
         self.NPKeys = None
 
     def __setitem__(self, key: str, value: ndarray):
+        if len(value) == 0:
+            return
+
         if key == 'ANIMINFO':
             self.NPSequences = value
         elif key == 'REFSKELT' or key == 'REFSKEL0' or key == 'BONENAMES':
@@ -322,6 +331,9 @@ class AnimationV2:
         self.NPRotTracks = list()
 
     def __setitem__(self, key: str, value: ndarray):
+        if len(value) == 0:
+            return
+
         if key == 'REFSKELT' or key == 'REFSKEL0' or key == 'BONENAMES':
             self.NPBones = value
         elif key == 'SEQUENCES':
@@ -358,6 +370,46 @@ class AnimationV2:
                 self.RotKeys[bone_id][rot_id] = (time, Quaternion((rot[3], rot[0], rot[1], rot[2])))
 
 
+class World:
+    TYPE: DataType = DataType.World
+
+    NumActors: int
+
+    Actors: list[tuple[str, str, int, Vector, Quaternion, Vector, bool, bool]]  # bools = no shadow, hidden
+    OverrideMaterials: list[dict[int, str]]
+
+    NPActors: ndarray
+    NPMaterials: ndarray | None
+
+    def __init__(self):
+        self.NumActors = 0
+
+        self.Actors = []
+        self.OverrideMaterials = []
+
+        self.NPActors = None
+        self.NPMaterials = None
+
+    def __setitem__(self, key: str, value: ndarray):
+        if len(value) == 0:
+            return
+
+        if key == 'WORLDACTORS':
+            self.NPActors = value
+        elif key == 'INSTMATERIAL':
+            self.NPMaterials = value
+
+    def finalize(self, settings: dict[str, Property]):
+        resize_by: float = settings['resize_by'] if 'resize_by' in settings else 0.01
+
+        self.NumActors = len(self.NPActors)
+        self.Actors = [(fix_string_np(x[0]), fix_string_np(x[1]), int(x[2]), Vector(x[3]) * resize_by, Quaternion((x[4][3], x[4][0], x[4][1], x[4][2])), Vector(x[5]), x[6] & 1 == 1, x[6] & 3 == 3) for x in self.NPActors]
+        self.OverrideMaterials = [{}] * self.NumActors
+        if self.NPMaterials is not None:
+            for (actor_id, material_id, material_name) in self.NPMaterials:
+                self.OverrideMaterials[actor_id][material_id] = fix_string_np(material_name)
+
+
 def read_chunk(stream: typing.BinaryIO) -> tuple[ndarray | None, str]:
     (chunk_id, chunk_type, chunk_size, chunk_count) = unpack('20s3i', stream.read(32))
     chunk_id = fix_string(chunk_id)
@@ -384,6 +436,8 @@ def read_actorx(stream: typing.BinaryIO, settings: dict[str, Property]) -> Anima
         ob = AnimationV2()
     elif magic == 'ANIMHEAD':
         ob = Animation()
+    elif magic == 'WRLDHEAD':
+        ob = World()
     else:
         return None
     print('Reading %s' % magic)

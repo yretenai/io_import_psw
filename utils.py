@@ -5,11 +5,11 @@ from numpy import ndarray
 
 
 def fix_string(string: str) -> str:
-    return string.rstrip(b'\0').decode(errors='replace', encoding='ascii')
+    return string.rstrip(b'\0').decode(errors='replace', encoding='utf8')
 
 
 def fix_string_np(string: ndarray) -> str:
-    return numpy.trim_zeros(string).tobytes().decode(errors='replace', encoding='ascii')
+    return numpy.trim_zeros(string).tobytes().decode(errors='replace', encoding='utf8')
 
 
 def select_all(select_mode: str) -> None:

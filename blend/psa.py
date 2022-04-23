@@ -38,7 +38,7 @@ class ActorXAnimation:
 
     def execute(self, context: Context):
         if self.psa is None or (self.psa.TYPE != DataType.Animation and self.psa.TYPE != DataType.AnimationV2):
-            return {'ERROR'}
+            return {'CANCELLED'}
 
         if self.psa.TYPE == DataType.Animation:
             return self.execute_legacy(context)

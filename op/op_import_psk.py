@@ -41,6 +41,7 @@ class op_import_psk(Operator, ImportHelper):
 
         if self.files:
             dirname = os.path.dirname(self.filepath)
+            ret = {'CANCELLED'}
             for file in self.files:
                 path = os.path.join(dirname, file.name)
                 if ActorXMesh(path, settings).execute(context) == {'FINISHED'}:

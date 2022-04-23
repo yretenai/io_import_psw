@@ -5,7 +5,7 @@ import bpy.types
 import io_import_pskx.utils as utils
 import numpy
 from bpy.types import Property, Context, Armature, Object, EditBone, MeshUVLoopLayer, MeshLoopColorLayer, VertexGroup, ArmatureModifier, ShapeKey
-from io_import_pskx.io import read_actorx, Mesh
+from io_import_pskx.io import read_actorx, Mesh, DataType
 from mathutils import Quaternion, Vector, Matrix
 
 
@@ -14,6 +14,7 @@ class ActorXMesh:
     settings: dict[str, Property]
     resize_mod: float
     psk: Mesh | None
+    override_materials: dict[int, str]
     name: str
 
     def __init__(self, path: str, settings: dict[str, Property]):
@@ -21,25 +22,28 @@ class ActorXMesh:
         self.name = splitext(basename(path))[0]
         self.settings = settings
         self.resize_mod = self.settings['resize_by']
+        self.override_materials = self.settings['override_materials'] if 'override_materials' in self.settings else {}
 
         with open(self.path, 'rb') as stream:
             self.psk = read_actorx(stream, settings)
 
     def execute(self, context: Context) -> set[str]:
-        if self.psa is None or self.psa.TYPE != DataType.Mesh:
-            return {'ERROR'}
+        if self.psk is None or self.psk.TYPE != DataType.Mesh:
+            return {'CANCELLED'}
 
         utils.select_all('DESELECT')
 
         mesh_data: Mesh = bpy.data.meshes.new(self.name)
         mesh_obj: Object = bpy.data.objects.new(mesh_data.name, mesh_data)
-        context.collection.objects.link(mesh_obj)
+        context.view_layer.active_layer_collection.collection.objects.link(mesh_obj)
 
         has_armature: bool = self.psk.Bones is not None and self.psk.Weights is not None
         armature_data: Armature | None = None
         armature_obj: Object | None = None
 
-        for material_name in self.psk.MaterialNames:
+        for material_id, material_name in enumerate(self.psk.MaterialNames):
+            if material_id in self.override_materials:
+                material_name = self.override_materials[material_id]
             material_data = bpy.data.materials.get(material_name) or bpy.data.materials.new(material_name)
             mesh_data.materials.append(material_data)
 
@@ -116,7 +120,7 @@ class ActorXMesh:
     def import_armature(context: Context, name: str, bones: list[tuple[str, int, Quaternion, Vector, Vector]]) -> set[Armature, Object]:
         armature_data: Armature = bpy.data.armatures.new(name + ' Armature')
         armature_obj: Object = bpy.data.objects.new(armature_data.name, armature_data)
-        context.collection.objects.link(armature_obj)
+        context.view_layer.active_layer_collection.collection.objects.link(armature_obj)
 
         armature_data.show_axes = False
         armature_data.display_type = 'STICK'
