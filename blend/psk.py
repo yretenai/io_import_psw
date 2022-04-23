@@ -26,6 +26,8 @@ class ActorXMesh:
             self.psk = read_actorx(stream, settings)
 
     def execute(self, context: Context) -> set[str]:
+        if self.psa is None or self.psa.TYPE != DataType.Mesh:
+            return {'ERROR'}
 
         utils.select_all('DESELECT')
 
@@ -139,15 +141,7 @@ class ActorXMesh:
             if parent_id == -1:
                 bone_rot.conjugate()
 
-            if bone_scale.length == 0.0:
-                bone_scale = Vector((1, 1, 1))
-
-            scale_matrix: Matrix = Matrix(((bone_scale.x, 0.0, 0.0, 0.0),
-                                           (0.0, bone_scale.y, 0.0, 0.0),
-                                           (0.0, 0.0, bone_scale.z, 0.0),
-                                           (0.0, 0.0, 0.0, 1.0)))
-
-            bone_matrix: Matrix = Matrix.Translation(bone_pos) @ bone_rot.conjugated().to_matrix().to_4x4() @ scale_matrix
+            bone_matrix: Matrix = Matrix.Translation(bone_pos) @ bone_rot.conjugated().to_matrix().to_4x4()
 
             if parent_id > -1:
                 edit_bone.parent = edit_bones[parent_id]
@@ -158,7 +152,6 @@ class ActorXMesh:
 
             edit_bone['actorx:bind_rest_rot'] = bone_rot.copy()
             edit_bone['actorx:bind_rest_pos'] = bone_pos.copy()
-            edit_bone['actorx:bind_rest_scale'] = bone_scale.copy()
 
         utils.set_mode('OBJECT')
 

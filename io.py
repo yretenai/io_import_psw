@@ -32,6 +32,9 @@ dispatch: dict[str, DTypeLike] = {
         'ANIMINFO':    dtype([('name', '64b'), ('group', '64b'), ('total_bones', 'i'), ('root_included', 'i'), ('key_compression_style', 'i'), ('key_quotum', 'i'), ('key_reduction', 'f'), ('duration', 'f'), ('frame_rate', 'f'), ('start_bone', 'i'), ('first_frame', 'i'), ('num_frames', 'i')]),
         'ANIMKEYS':    dtype([('pos', '3f'), ('rot', '4f'), ('time', 'f')]),
         'SCALEKEYS':   dtype([('scale', '3f'), ('time', 'f')]),
+        'SEQUENCES':   dtype([('name', '64b'), ('framerate', 'f')]),
+        'ROTTRACK':    dtype([('time', 'f'), ('xyzw', '4f')]),
+        'POSTRACK':    dtype([('time', 'f'), ('xyz', '3f')]),
 }
 
 
@@ -45,6 +48,7 @@ class PhysicsShape(Enum):
 class DataType(Enum):
     Mesh = 0
     Animation = 1
+    AnimationV2 = 2
 
 
 class Mesh:
@@ -231,33 +235,27 @@ class Animation:
     NumSequences: int
     NumBones: int
     NumKeys: int
-    NumScaleKeys: int
 
     Sequences: list[tuple[str, str, int, int, float]] | None
     Bones: list[tuple[str, int, Quaternion, Vector, Vector]] | None
     Keys: list[tuple[float, Vector, Quaternion]] | None
-    ScaleKeys: list[Vector] | None
 
     NPSequences: ndarray | None
     NPBones: ndarray | None
     NPKeys: ndarray | None
-    NPScaleKeys: ndarray | None
 
     def __init__(self):
         self.NumSequences = 0
         self.NumBones = 0
         self.NumKeys = 0
-        self.NumScaleKeys = 0
 
         self.Sequences = None
         self.Bones = None
         self.Keys = None
-        self.ScaleKeys = None
 
         self.NPSequences = None
         self.NPBones = None
         self.NPKeys = None
-        self.NPScaleKeys = None
 
     def __setitem__(self, key: str, value: ndarray):
         if key == 'ANIMINFO':
@@ -266,8 +264,6 @@ class Animation:
             self.NPBones = value
         elif key == 'ANIMKEYS':
             self.NPKeys = value
-        elif key == 'SCALEKEYS':
-            self.NPScaleKeys = value
 
     def finalize(self, settings: dict[str, Property]):
         resize_by: float = settings['resize_by'] if 'resize_by' in settings else 0.01
@@ -291,12 +287,75 @@ class Animation:
             for key_id, (pos, rot, time) in enumerate(self.NPKeys.tolist()):
                 self.Keys[key_id] = (time, Vector(pos) * resize_by, Quaternion((rot[3], rot[0], rot[1], rot[2])))
 
-        if self.NPScaleKeys is not None:
-            self.NumScaleKeys = len(self.NPScaleKeys)
-            self.ScaleKeys = [None] * self.NumScaleKeys
 
-            for key_id, (scale, time) in enumerate(self.NPScaleKeys.tolist()):
-                self.ScaleKeys[key_id] = Vector(scale) * resize_by
+class AnimationV2:
+    TYPE: DataType = DataType.AnimationV2
+
+    NumBones: int
+
+    SequenceName: str | None
+    Bones: list[tuple[str, int, Quaternion, Vector, Vector]] | None
+    PosKeys: list[list[tuple[float, Vector]]] | None
+    RotKeys: list[list[tuple[float, Quaternion]]] | None
+    PosKeyLength = list[int]
+    RotKeyLength = list[int]
+
+    NPBones: ndarray | None
+    NPSequences: ndarray | None
+    NPPosTracks: list[list[ndarray]] | None
+    NPRotTracks: list[list[ndarray]] | None
+
+    def __init__(self):
+        self.NumSequences = 0
+        self.NumBones = 0
+
+        self.SequenceName = None
+        self.Bones = None
+        self.PosKeys = None
+        self.RotKeys = None
+        self.PosKeyLength = None
+        self.RotKeyLength = None
+
+        self.NPBones = None
+        self.NPSequences = None
+        self.NPPosTracks = list()
+        self.NPRotTracks = list()
+
+    def __setitem__(self, key: str, value: ndarray):
+        if key == 'REFSKELT' or key == 'REFSKEL0' or key == 'BONENAMES':
+            self.NPBones = value
+        elif key == 'SEQUENCES':
+            self.NPSequences = value
+        elif key[:8] == 'POSTRACK':
+            self.NPPosTracks.append(value)
+        elif key[:8] == 'ROTTRACK':
+            self.NPRotTracks.append(value)
+
+    def finalize(self, settings: dict[str, Property]):
+        resize_by: float = settings['resize_by'] if 'resize_by' in settings else 0.01
+
+        self.NumBones = len(self.NPBones)
+        self.Bones = [None] * self.NumBones
+        for bone_id, (bone_name, flags, num_children, parent_id, rot, pos, length, scale) in enumerate(self.NPBones):
+            self.Bones[bone_id] = (fix_string_np(bone_name), parent_id, Quaternion((rot[3], rot[0], rot[1], rot[2])), Vector(pos) * resize_by, Vector(pos) * resize_by)
+
+        self.SequenceName = fix_string_np(self.NPSequences[0]["name"])
+
+        self.PosKeys = [None] * self.NumBones
+        self.RotKeys = [None] * self.NumBones
+        self.PosKeyLength = [len(keys) for keys in self.NPPosTracks]
+        self.RotKeyLength = [len(keys) for keys in self.NPRotTracks]
+
+        for bone_id in range(self.NumBones):
+            NBBonePosKeys: list[tuple[time, list[float]]] = self.NPPosTracks[bone_id].tolist()
+            self.PosKeys[bone_id] = [None] * len(NBBonePosKeys)
+            for pos_id, (time, pos) in enumerate(NBBonePosKeys):
+                self.PosKeys[bone_id][pos_id] = (time, Vector(pos) * resize_by)
+
+            NBBoneRotKeys: list[tuple[time, list[float]]] = self.NPRotTracks[bone_id].tolist()
+            self.RotKeys[bone_id] = [None] * len(NBBoneRotKeys)
+            for rot_id, (time, rot) in enumerate(NBBoneRotKeys):
+                self.RotKeys[bone_id][rot_id] = (time, Quaternion((rot[3], rot[0], rot[1], rot[2])))
 
 
 def read_chunk(stream: typing.BinaryIO) -> tuple[ndarray | None, str]:
@@ -321,6 +380,8 @@ def read_actorx(stream: typing.BinaryIO, settings: dict[str, Property]) -> Anima
     magic = fix_string(unpack('20s', stream.read(20))[0])
     if magic == 'ACTRHEAD':
         ob = Mesh()
+    elif magic == 'ANIXHEAD':
+        ob = AnimationV2()
     elif magic == 'ANIMHEAD':
         ob = Animation()
     else:
