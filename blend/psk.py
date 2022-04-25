@@ -35,7 +35,7 @@ class ActorXMesh:
         mesh_obj: Object = bpy.data.objects.new(mesh_data.name, mesh_data)
         context.view_layer.active_layer_collection.collection.objects.link(mesh_obj)
 
-        has_armature: bool = self.psk.Bones is not None and self.psk.Weights is not None
+        has_armature: bool = self.psk.Bones is not None
         armature_data: Armature | None = None
         armature_obj: Object | None = None
 
@@ -93,8 +93,9 @@ class ActorXMesh:
         mesh_data.update()
 
         if has_armature:
-            for weight, vertex_id, bone_id in self.psk.Weights:
-                vertex_groups[bone_id].add((vertex_id,), weight, 'ADD')
+            if self.psk.Weights is not None:
+                for weight, vertex_id, bone_id in self.psk.Weights:
+                    vertex_groups[bone_id].add((vertex_id,), weight, 'ADD')
 
             armature_modifier: ArmatureModifier = mesh_obj.modifiers.new(armature_obj.data.name, type='ARMATURE')
             armature_modifier.show_expanded = False

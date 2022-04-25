@@ -191,12 +191,13 @@ class Mesh:
             for material_id, material_name in enumerate(self.NPMaterials['name']):
                 self.MaterialNames[material_id] = fix_string_np(material_name)
 
-        if self.NPBones is not None and self.NPWeights is not None and len(self.NPBones) > 0 and len(self.NPWeights) > 0:
+        if self.NPBones is not None and len(self.NPBones) > 0:
             self.NumBones = len(self.NPBones)
             self.Bones = [None] * self.NumBones
             for bone_id, (bone_name, flags, num_children, parent_id, rot, pos, length, scale) in enumerate(self.NPBones):
                 self.Bones[bone_id] = (fix_string_np(bone_name), parent_id, Quaternion((rot[3], rot[0], rot[1], rot[2])), Vector((pos[0], pos[1], pos[2])) * resize_by, Vector((scale[0], scale[1], scale[2])) * resize_by)
 
+        if self.NPWeights is not None and len(self.NPWeights) > 0:
             self.Weights = self.NPWeights.tolist()
 
         if self.NPColors is not None and len(self.NPColors) > 0:
