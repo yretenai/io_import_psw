@@ -59,13 +59,14 @@ class ActorXWorld:
             if mesh_key in mesh_cache:
                 mesh_obj = mesh_cache[mesh_key]
             else:
-                if not psk_path.endswith('.psk'):
-                    psk_path += ".psk"
+                result_path = psk_path
+                if not result_path.endswith('.psk'):
+                    result_path += ".psk"
 
                 if sep != '/':
-                    psk_path = psk_path.replace('/', sep)
+                    result_path = result_path.replace('/', sep)
 
-                result_path = normpath(join_path(self.game_dir, psk_path))
+                result_path = normpath(join_path(self.game_dir, result_path))
 
                 if not exists(result_path):  # try getting pskx instead of psk
                     result_path += 'x'
@@ -82,6 +83,7 @@ class ActorXWorld:
                     psk.execute(context)
                     mesh_cache[mesh_key] = mesh_obj
                 else:
+                    print("Can't find asset %s" % (psk_path))
                     mesh_obj = None
 
             instance = bpy.data.objects.new(name, None)
