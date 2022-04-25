@@ -67,29 +67,32 @@ class ActorXWorld:
 
                 result_path = normpath(join_path(self.game_dir, psk_path))
 
-                if not exists(result_path):
+                if not exists(result_path):  # try getting pskx instead of psk
                     result_path += 'x'
-                    if not exists(result_path):
-                        continue
 
-                import_settings = self.settings.copy()
-                import_settings['override_materials'] = self.psw.OverrideMaterials[actor_id]
-                psk = ActorXMesh(result_path, import_settings)
+                if exists(result_path):
+                    import_settings = self.settings.copy()
+                    import_settings['override_materials'] = self.psw.OverrideMaterials[actor_id]
+                    psk = ActorXMesh(result_path, import_settings)
 
-                mesh_obj = bpy.data.collections.new(psk.name)
-                actor_collection.children.link(mesh_obj)
-                context.view_layer.active_layer_collection = actor_layer.children[-1]
+                    mesh_obj = bpy.data.collections.new(psk.name)
+                    actor_collection.children.link(mesh_obj)
+                    context.view_layer.active_layer_collection = actor_layer.children[-1]
 
-                psk.execute(context)
-                mesh_cache[mesh_key] = mesh_obj
+                    psk.execute(context)
+                    mesh_cache[mesh_key] = mesh_obj
+                else:
+                    mesh_obj = None
 
             instance = bpy.data.objects.new(name, None)
             instance.location = pos
             instance.rotation_mode = 'QUATERNION'
             instance.rotation_quaternion = rot
             instance.scale = scale
-            instance.instance_type = 'COLLECTION'
-            instance.instance_collection = mesh_obj
+
+            if mesh_obj is not None:
+                instance.instance_type = 'COLLECTION'
+                instance.instance_collection = mesh_obj
 
             if no_shadow:
                 instance.visible_shadow = False
