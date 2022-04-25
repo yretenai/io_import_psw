@@ -115,7 +115,7 @@ class ActorXMesh:
         armature_obj.show_in_front = True
 
         context.view_layer.objects.active = armature_obj
-        bpy.ops.object.mode_set('EDIT', toggle=False)
+        bpy.ops.object.mode_set(mode='EDIT', toggle=False)
 
         edit_bones: list[EditBone] = [None] * len(bones)
         bone_matrices: List[Matrix] = [None] * len(bones)
@@ -144,6 +144,6 @@ class ActorXMesh:
             edit_bone['actorx:bind_rest_rot'] = bone_rot.copy()
             edit_bone['actorx:bind_rest_pos'] = bone_pos.copy()
 
-        bpy.ops.object.mode_set('OBJECT', toggle=false)
+        bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
 
         return (armature_data, armature_obj)
