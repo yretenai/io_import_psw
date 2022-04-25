@@ -122,9 +122,6 @@ class Mesh:
         self.NPPhysics = None
 
     def __setitem__(self, key: str, value: ndarray):
-        if len(value) == 0:
-            return
-
         if key == 'PNTS0000':
             self.NPPoints = value
         elif key == 'VTXW0000' or key == 'VTXW3200':
@@ -167,7 +164,7 @@ class Mesh:
         self.Faces = [None] * self.NumFaces
         self.UVs = [[None] * self.NumFaces * 3]
         NPWedgeUV = (self.NPWedges['uv'] * [(1.0, -1.0)] + [(0.0, 1.0)]).tolist()
-        has_materials = self.NPMaterials is not None
+        has_materials = self.NPMaterials is not None and len(self.NPMaterials) > 0
         if has_materials:
             self.Materials = [None] * self.NumFaces
         for face_id, (rgb, material_id, _, _) in enumerate(self.NPFaces):
@@ -178,12 +175,12 @@ class Mesh:
             if has_materials:
                 self.Materials[face_id] = material_id
 
-        if self.NPNormals is not None:
+        if self.NPNormals is not None and len(self.NPNormals) > 0:
             self.Normals = [None] * self.NumVertices
             for wedge_id, rgb in enumerate(self.NPNormals['xyz']):
                 self.Normals[wedge_id] = rgb
 
-        if self.NPTangents is not None:
+        if self.NPTangents is not None and len(self.NPNormals) > 0:
             self.Tangents = [None] * self.NumVertices
             for wedge_id, rgb in enumerate(self.NPTangents['xyzw']):
                 self.Tangents[wedge_id] = rgb
@@ -194,7 +191,7 @@ class Mesh:
             for material_id, material_name in enumerate(self.NPMaterials['name']):
                 self.MaterialNames[material_id] = fix_string_np(material_name)
 
-        if self.NPBones is not None and self.NPWeights is not None:
+        if self.NPBones is not None and self.NPWeights is not None and len(self.NPBones) > 0 and len(self.NPWeights) > 0:
             self.NumBones = len(self.NPBones)
             self.Bones = [None] * self.NumBones
             for bone_id, (bone_name, flags, num_children, parent_id, rot, pos, length, scale) in enumerate(self.NPBones):
@@ -202,7 +199,7 @@ class Mesh:
 
             self.Weights = self.NPWeights.tolist()
 
-        if self.NPColors is not None:
+        if self.NPColors is not None and self.NPColors > 0:
             self.Colors = [None] * self.NumFaces * 3
             NPColorsFloat = (self.NPColors['rgba'] / 0xff).tolist()
             for face_id, (a, b, c) in enumerate(self.Faces):
@@ -210,7 +207,7 @@ class Mesh:
                 self.Colors[face_id * 3 + 1] = NPColorsFloat[b]
                 self.Colors[face_id * 3 + 2] = NPColorsFloat[c]
 
-        if self.NPUVs is not None:
+        if self.NPUVs is not None and self.NPUVs > 0:
             for uv_id, NPUV in enumerate(self.NPUVs):
                 NPExtraUV = (NPUV['uv'] * [(1.0, -1.0)] + [(0.0, 1.0)]).tolist()
                 ExtraUV = [None] * self.NumFaces * 3
@@ -221,7 +218,7 @@ class Mesh:
                 self.UVs.append(ExtraUV)
         self.NumUVs = len(self.UVs)
 
-        if self.NPShapeKeys is not None and self.NPShapeNames is not None:
+        if self.NPShapeKeys is not None and self.NPShapeNames is not None and len(self.NPShapeKeys) > 0 and len(self.NPShapeNames) > 0:
             self.NumShapes = len(self.NPShapeKeys)
             for shape_id, shape_data in enumerate(self.NPShapeKeys):
                 shape_data['xyz'] *= resize_by
@@ -230,9 +227,9 @@ class Mesh:
                 for vertex_id, shape_delta in shape_data.tolist():
                     self.ShapeKeys[shape_name][int(vertex_id)] = shape_delta
 
-        # if self.NPPhysics is not None:
-        # self.NumHitboxes = len(self.NPPhysics)
-        # todo(naomi): physics
+        if self.NPPhysics is not None and len(self.NPPhysics) > 0:
+            self.NumHitboxes = len(self.NPPhysics)
+            # todo(naomi): physics
 
 
 class Animation:
@@ -277,24 +274,21 @@ class Animation:
     def finalize(self, settings: dict[str, Property]):
         resize_by: float = settings['resize_by'] if 'resize_by' in settings else 0.01
 
-        if self.NPSequences is not None:
-            self.NumSequences = len(self.NPSequences)
-            self.Sequences = [None] * self.NumSequences
-            for sequence_id, (name, group, total_bones, rooted, compression_style, quotum, reduction, duration, framerate, first_bone, first_frame, raw_frames) in enumerate(self.NPSequences):
-                self.Sequences[sequence_id] = (fix_string_np(name), fix_string_np(group), total_bones, raw_frames, framerate)
+        self.NumSequences = len(self.NPSequences)
+        self.Sequences = [None] * self.NumSequences
+        for sequence_id, (name, group, total_bones, rooted, compression_style, quotum, reduction, duration, framerate, first_bone, first_frame, raw_frames) in enumerate(self.NPSequences):
+            self.Sequences[sequence_id] = (fix_string_np(name), fix_string_np(group), total_bones, raw_frames, framerate)
 
-        if self.NPBones is not None:
-            self.NumBones = len(self.NPBones)
-            self.Bones = [None] * self.NumBones
-            for bone_id, (bone_name, flags, num_children, parent_id, rot, pos, length, scale) in enumerate(self.NPBones):
-                self.Bones[bone_id] = (fix_string_np(bone_name), parent_id, Quaternion((rot[3], rot[0], rot[1], rot[2])), Vector((pos[0], pos[1], pos[2])) * resize_by, Vector((scale[0], scale[1], scale[2])) * resize_by)
+        self.NumBones = len(self.NPBones)
+        self.Bones = [None] * self.NumBones
+        for bone_id, (bone_name, flags, num_children, parent_id, rot, pos, length, scale) in enumerate(self.NPBones):
+            self.Bones[bone_id] = (fix_string_np(bone_name), parent_id, Quaternion((rot[3], rot[0], rot[1], rot[2])), Vector((pos[0], pos[1], pos[2])) * resize_by, Vector((scale[0], scale[1], scale[2])) * resize_by)
 
-        if self.NPKeys is not None:
-            self.NumKeys = len(self.NPKeys)
-            self.Keys = [None] * self.NumKeys
+        self.NumKeys = len(self.NPKeys)
+        self.Keys = [None] * self.NumKeys
 
-            for key_id, (pos, rot, time) in enumerate(self.NPKeys.tolist()):
-                self.Keys[key_id] = (time, Vector(pos) * resize_by, Quaternion((rot[3], rot[0], rot[1], rot[2])))
+        for key_id, (pos, rot, time) in enumerate(self.NPKeys.tolist()):
+            self.Keys[key_id] = (time, Vector(pos) * resize_by, Quaternion((rot[3], rot[0], rot[1], rot[2])))
 
 
 class AnimationV2:
@@ -331,9 +325,6 @@ class AnimationV2:
         self.NPRotTracks = list()
 
     def __setitem__(self, key: str, value: ndarray):
-        if len(value) == 0:
-            return
-
         if key == 'REFSKELT' or key == 'REFSKEL0' or key == 'BONENAMES':
             self.NPBones = value
         elif key == 'SEQUENCES':
@@ -391,9 +382,6 @@ class World:
         self.NPMaterials = None
 
     def __setitem__(self, key: str, value: ndarray):
-        if len(value) == 0:
-            return
-
         if key == 'WORLDACTORS':
             self.NPActors = value
         elif key == 'INSTMATERIAL':
@@ -405,7 +393,7 @@ class World:
         self.NumActors = len(self.NPActors)
         self.Actors = [(fix_string_np(x[0]), fix_string_np(x[1]), int(x[2]), Vector(x[3]) * resize_by, Quaternion((x[4][3], x[4][0], x[4][1], x[4][2])), Vector(x[5]), x[6] & 1 == 1, x[6] & 3 == 3) for x in self.NPActors]
         self.OverrideMaterials = [{}] * self.NumActors
-        if self.NPMaterials is not None:
+        if self.NPMaterials is not None and len(self.NPMaterials) > 0:
             for (actor_id, material_id, material_name) in self.NPMaterials:
                 self.OverrideMaterials[actor_id][material_id] = fix_string_np(material_name)
 
