@@ -199,7 +199,7 @@ class Mesh:
 
             self.Weights = self.NPWeights.tolist()
 
-        if self.NPColors is not None and self.NPColors > 0:
+        if self.NPColors is not None and len(self.NPColors) > 0:
             self.Colors = [None] * self.NumFaces * 3
             NPColorsFloat = (self.NPColors['rgba'] / 0xff).tolist()
             for face_id, (a, b, c) in enumerate(self.Faces):
@@ -207,7 +207,7 @@ class Mesh:
                 self.Colors[face_id * 3 + 1] = NPColorsFloat[b]
                 self.Colors[face_id * 3 + 2] = NPColorsFloat[c]
 
-        if self.NPUVs is not None and self.NPUVs > 0:
+        if self.NPUVs is not None and len(self.NPUVs) > 0:
             for uv_id, NPUV in enumerate(self.NPUVs):
                 NPExtraUV = (NPUV['uv'] * [(1.0, -1.0)] + [(0.0, 1.0)]).tolist()
                 ExtraUV = [None] * self.NumFaces * 3
