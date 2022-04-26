@@ -36,6 +36,7 @@ dispatch: dict[str, DTypeLike] = {
         'ROTTRACK':     dtype([('time', 'f'), ('xyzw', '4f')]),
         'POSTRACK':     dtype([('time', 'f'), ('xyz', '3f')]),
         'WORLDACTORS':  dtype([('name', '64b'), ('asset', '256b'), ('parent', 'i'), ('pos', '3f'), ('rot', '4f'), ('scale', '3f'), ('flags', 'i')]),
+        'LANDSCAPE':    dtype([('name', '256b'), ('actor_id', 'i'), ('x', 'i'), ('y', 'i'), ('type', 'i'), ('size', 'i'), ('scale', 'f'), ('offset', 'f')]),
         'INSTMATERIAL': dtype([('actor_id', 'i'), ('material_id', 'i'), ('name', '64b')])
 }
 
@@ -369,34 +370,44 @@ class World:
 
     Actors: list[tuple[str, str, int, Vector, Quaternion, Vector, bool, bool]]  # bools = no shadow, hidden
     OverrideMaterials: list[dict[int, str]]
+    Landscapes: list[tuple[str, int, Vector, Vector, int, float, float]]  # name, actor, pos, size, type, bias, offset
 
     NPActors: ndarray
     NPMaterials: ndarray | None
+    NPLandscapes: ndarray | None
 
     def __init__(self):
         self.NumActors = 0
 
         self.Actors = []
         self.OverrideMaterials = []
+        self.Landscapes = []
 
         self.NPActors = None
         self.NPMaterials = None
+        self.NPLandscapes = None
 
     def __setitem__(self, key: str, value: ndarray):
         if key == 'WORLDACTORS':
             self.NPActors = value
         elif key == 'INSTMATERIAL':
             self.NPMaterials = value
+        elif key == 'LANDSCAPE':
+            self.NPLandscapes = value
 
     def finalize(self, settings: dict[str, Property]):
         resize_by: float = settings['resize_by'] if 'resize_by' in settings else 0.01
 
         self.NumActors = len(self.NPActors)
         self.Actors = [(fix_string_np(x[0]), fix_string_np(x[1]), int(x[2]), Vector(x[3]) * resize_by, Quaternion((x[4][3], x[4][0], x[4][1], x[4][2])), Vector(x[5]), x[6] & 1 == 1, x[6] & 3 == 3) for x in self.NPActors]
+
         self.OverrideMaterials = [{}] * self.NumActors
         if self.NPMaterials is not None and len(self.NPMaterials) > 0:
             for (actor_id, material_id, material_name) in self.NPMaterials:
                 self.OverrideMaterials[actor_id][material_id] = fix_string_np(material_name)
+
+        if self.NPLandscapes is not None and len(self.NPLandscapes) > 0:
+            self.Landscapes = [(fix_string_np(x[0]), x[1], Vector((x[2], -x[3], 0.0)) * resize_by, Vector((x[5], x[5], x[5])) * resize_by, x[4], float(x[6]), float(x[7])) for x in self.NPLandscapes]
 
 
 def read_chunk(stream: typing.BinaryIO) -> tuple[ndarray | None, str]:

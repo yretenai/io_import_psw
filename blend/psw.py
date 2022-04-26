@@ -3,10 +3,9 @@ from os.path import join as join_path
 
 import bpy.types
 import io_import_pskx.utils as utils
-from bpy.types import Property, Context, Collection
+from bpy.types import Property, Context, Collection, Mesh, Object, NodesModifier, GeometryNodeTree, NodeGroupOutput, GeometryNodeGroup
 from io_import_pskx.io import read_actorx, World, DataType
-
-from .psk import ActorXMesh
+from io_import_pskx.blend.psk import ActorXMesh
 
 
 class ActorXWorld:
@@ -51,14 +50,13 @@ class ActorXWorld:
 
         actor_cache: list[Collection] = [None] * self.psw.NumActors
 
-        # todo: landscapes
-
         for actor_id, (name, psk_path, parent, pos, rot, scale, no_shadow, hidden) in enumerate(self.psw.Actors):
             mesh_key = (psk_path, frozenset(self.psw.OverrideMaterials[actor_id].items()))
 
+            mesh_obj = None
             if mesh_key in mesh_cache:
                 mesh_obj = mesh_cache[mesh_key]
-            else:
+            elif psk_path != 'None':
                 result_path = psk_path
                 if not result_path.endswith('.psk'):
                     result_path += ".psk"
@@ -109,6 +107,46 @@ class ActorXWorld:
             actor_cache[actor_id] = instance
 
             world_collection.objects.link(instance)
+
+        for (tex_path, actor_id, pos, scale, type_id, bias, offset) in self.psw.Landscapes:
+            if type_id != 0:
+                continue
+
+            result_path = tex_path
+            if not result_path.endswith('.png'):
+                result_path += ".png"
+            if sep != '/':
+                result_path = result_path.replace('/', sep)
+            result_path = normpath(join_path(self.game_dir, result_path))
+
+            if not exists(result_path):
+                print("Can't find asset %s" % (tex_path))
+                continue
+
+            actor = actor_cache[0 if actor_id == -1 else actor_id]
+
+            landscape_data: Mesh = bpy.data.meshes.new(actor.name + "_Chunk")
+            landscape_obj: Object = bpy.data.objects.new(name=landscape_data.name, object_data=landscape_data)
+            landscape_obj.parent = actor
+            landscape_obj.scale = scale
+            landscape_obj.location = pos
+
+            landscape_nodes: GeometryNodeTree = bpy.data.node_groups.new(landscape_obj.name, "GeometryNodeTree")
+            output_node: NodeGroupOutput = landscape_nodes.nodes.new(type='NodeGroupOutput')
+            output_node.location = (400, 0)
+            group_node: GeometryNodeGroup = landscape_nodes.nodes.new(type='GeometryNodeGroup')
+            group_node.node_tree = bpy.data.node_groups['PSW Height']
+            group_node.inputs["Size"].default_value = 32
+            group_node.inputs["Bias"].default_value = offset
+            group_node.inputs["Offset"].default_value = bias * 2  # confusing
+
+            group_node.inputs["Heightmap"].default_value = bpy.data.images.load(filepath=result_path, check_existing=True)
+            landscape_nodes.links.new(group_node.outputs[0], output_node.inputs[0])
+
+            node_modifier: NodesModifier = landscape_obj.modifiers.new("Landscape Geometry", type='NODES')
+            node_modifier.node_group = landscape_nodes
+
+            world_collection.objects.link(landscape_obj)
 
         context.view_layer.active_layer_collection = old_active_layer
 

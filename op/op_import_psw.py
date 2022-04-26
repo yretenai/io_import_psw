@@ -5,6 +5,7 @@ from bpy.props import CollectionProperty, FloatProperty, StringProperty
 from bpy.types import Operator, Context, Property, OperatorFileListElement, TOPBAR_MT_file_import
 from bpy_extras.io_utils import ImportHelper
 from io_import_pskx.blend.psw import ActorXWorld
+from io_import_pskx.blend import nodes
 
 
 class op_import_psw(Operator, ImportHelper):
@@ -45,6 +46,8 @@ class op_import_psw(Operator, ImportHelper):
         if len(self.base_game_dir) == 0:
             self.report({'ERROR'}, 'Did not select a game directory')
             return {'CANCELLED'}
+
+        nodes.register()
 
         import os
 

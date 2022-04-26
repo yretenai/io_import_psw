@@ -36,7 +36,7 @@ def reload_package(module_dict_main: dict[str, Any]) -> None:
 if 'op' in locals():
     reload_package(locals())
 else:
-    from . import op
+    from io_import_pskx import op
 
 
 def register():

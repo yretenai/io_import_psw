@@ -1,6 +1,6 @@
-from . import op_import_psa
-from . import op_import_psk
-from . import op_import_psw
+from io_import_pskx.op import op_import_psa
+from io_import_pskx.op import op_import_psk
+from io_import_pskx.op import op_import_psw
 
 
 def register():

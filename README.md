@@ -119,9 +119,21 @@ Lists actors present in the world.
 
 Single Chunk.
 
-`72 bytes - int actor_id, int material_id char[64] name`
+`72 bytes - int actor_id, int material_id, char[64] name`
 
 Specifies material overrides for a specific actor.
+
+### PSW - LANDSCAPE
+
+Single Chunk.
+
+`284 bytes - char[256] map_path, int actor_id, float x, float y, int type, int size, float scale, float offset`
+
+Specifies landscape components, last two values are speculative and uncertain how it functions. 
+These values are the X and Z of the "Bias" property.
+
+Landscape importing is imprefect at best, and often completely wrong, but it constructs
+the tiles correctly, at least.
 
 ## Why an animation format change?
 
