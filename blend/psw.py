@@ -3,7 +3,8 @@ from os.path import join as join_path
 
 import bpy.types
 import io_import_pskx.utils as utils
-from bpy.types import Property, Context, Collection, Mesh, Object, NodesModifier, GeometryNodeTree, NodeGroupOutput, GeometryNodeGroup, Image
+from bpy.types import Property, Context, Collection, Mesh, Object, NodesModifier, GeometryNodeTree, NodeGroupOutput, GeometryNodeGroup, Image, Material, ShaderNodeTexCoord, ShaderNodeSeparateXYZ, NodeReroute, ShaderNodeTexImage
+from mathutils import Vector
 from io_import_pskx.io import read_actorx, World, DataType
 from io_import_pskx.blend.psk import ActorXMesh
 
@@ -108,10 +109,9 @@ class ActorXWorld:
 
             world_collection.objects.link(instance)
 
-        for (tex_path, actor_id, pos, scale, type_id, tile_x, tile_y, quad_size) in self.psw.Landscapes:
-            if type_id != 0:
-                continue
+        tiles: map[tuple[int, int], tuple[Object, Material, ShaderNodeTexCoord, set[str]]] = {}
 
+        for (tex_path, actor_id, pos, scale, type_id, tile_x, tile_y, quad_size) in self.psw.Landscapes:
             result_path = tex_path
             if not result_path.endswith('.png'):
                 result_path += ".png"
@@ -121,6 +121,41 @@ class ActorXWorld:
 
             if not exists(result_path):
                 print("Can't find asset %s" % (tex_path))
+                continue
+
+            if type_id != 0:
+                if (tile_x, tile_y) not in tiles:
+                    continue
+
+                (landscape_obj, material, tex_coord, tracking) = tiles[(tile_x, tile_y)]
+                if tex_path in tracking:
+                    continue
+                tracking.add(tex_path)
+
+                material_data = landscape_obj.material_slots[0].material
+                node_tree = material_data.node_tree
+
+                # create nodes
+                image_node: ShaderNodeTexImage = node_tree.nodes.new(type='ShaderNodeTexImage')
+                image_node.image = bpy.data.images.load(filepath=result_path, check_existing=True)
+                image_node.image.colorspace_settings.name = 'Raw'
+                image_node.interpolation = 'Cubic'
+                image_node.extension = 'EXTEND'
+                image_node.location = tex_coord.location + Vector((240, -((type_id - 1) * 280)))
+                image_node.label = 'Weightmap%d' % (type_id - 1)
+
+                separate_xyz: ShaderNodeSeparateXYZ = node_tree.nodes.new(type='ShaderNodeSeparateXYZ')
+                separate_xyz.location = image_node.location + Vector((360, 0))
+
+                reroute: NodeReroute = node_tree.nodes.new(type='NodeReroute')
+                reroute.location = separate_xyz.location + Vector((140, -160))
+                reroute.label = 'A'
+
+                # create links
+                node_tree.links.new(tex_coord.outputs['Generated'], image_node.inputs['Vector'])
+                node_tree.links.new(image_node.outputs['Color'], separate_xyz.inputs['Vector'])
+                node_tree.links.new(image_node.outputs['Alpha'], reroute.inputs[0])
+
                 continue
 
             actor = actor_cache[0 if actor_id == -1 else actor_id]
@@ -148,6 +183,20 @@ class ActorXWorld:
             bpy.data.node_groups.remove(old_group)
 
             world_collection.objects.link(landscape_obj)
+
+            material_data: Material = bpy.data.materials.get(landscape_data.name)
+
+            if material_data is None:
+                material_data = bpy.data.materials.new(landscape_data.name)
+                material_data.use_nodes = True
+                tex_coord = material_data.node_tree.nodes.new(type='ShaderNodeTexCoord')
+                tex_coord.location = material_data.node_tree.nodes['Principled BSDF'].location + Vector((-1200, 0))
+
+            landscape_data.materials.append(material_data)
+            landscape_obj.material_slots[0].link = 'OBJECT'
+            landscape_obj.material_slots[0].material = material_data
+
+            tiles[(tile_x, tile_y)] = (landscape_obj, material_data, tex_coord, set())
 
         context.view_layer.active_layer_collection = old_active_layer
 

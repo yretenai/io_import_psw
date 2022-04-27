@@ -43,6 +43,7 @@ class ActorXMesh:
             if material_id in self.override_materials:
                 material_name = self.override_materials[material_id]
             material_data = bpy.data.materials.get(material_name) or bpy.data.materials.new(material_name)
+            material_data.use_nodes = True
             mesh_data.materials.append(material_data)
 
         if has_armature:
