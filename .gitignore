@@ -4,6 +4,7 @@ tmp
 **/*.pyc 
 .idea
 *.blend*
+!blend/nodes.blend
 *.bak
 venv
 __data__
