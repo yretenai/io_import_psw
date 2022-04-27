@@ -149,7 +149,7 @@ class ActorXWorld:
 
                 reroute: NodeReroute = node_tree.nodes.new(type='NodeReroute')
                 reroute.location = separate_xyz.location + Vector((140, -160))
-                reroute.label = 'A'
+                reroute.label = 'W'
 
                 # create links
                 node_tree.links.new(tex_coord.outputs['Generated'], image_node.inputs['Vector'])
