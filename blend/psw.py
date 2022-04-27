@@ -3,7 +3,7 @@ from os.path import join as join_path
 
 import bpy.types
 import io_import_pskx.utils as utils
-from bpy.types import Property, Context, Collection, Mesh, Object, NodesModifier, GeometryNodeTree, NodeGroupOutput, GeometryNodeGroup
+from bpy.types import Property, Context, Collection, Mesh, Object, NodesModifier, GeometryNodeTree, NodeGroupOutput, GeometryNodeGroup, Image
 from io_import_pskx.io import read_actorx, World, DataType
 from io_import_pskx.blend.psk import ActorXMesh
 
@@ -108,7 +108,7 @@ class ActorXWorld:
 
             world_collection.objects.link(instance)
 
-        for (tex_path, actor_id, pos, scale, type_id, bias, offset) in self.psw.Landscapes:
+        for (tex_path, actor_id, pos, scale, type_id, tile_x, tile_y, quad_size) in self.psw.Landscapes:
             if type_id != 0:
                 continue
 
@@ -125,7 +125,7 @@ class ActorXWorld:
 
             actor = actor_cache[0 if actor_id == -1 else actor_id]
 
-            landscape_data: Mesh = bpy.data.meshes.new(actor.name + "_Chunk")
+            landscape_data: Mesh = bpy.data.meshes.new(actor.name + "_Sector%d_%d" % (tile_x, tile_y))
             landscape_obj: Object = bpy.data.objects.new(name=landscape_data.name, object_data=landscape_data)
             landscape_obj.parent = actor
             landscape_obj.scale = scale
@@ -136,15 +136,16 @@ class ActorXWorld:
             output_node.location = (400, 0)
             group_node: GeometryNodeGroup = landscape_nodes.nodes.new(type='GeometryNodeGroup')
             group_node.node_tree = bpy.data.node_groups['PSW Height']
-            group_node.inputs["Size"].default_value = 32
-            group_node.inputs["Bias"].default_value = offset
-            group_node.inputs["Offset"].default_value = bias * 2  # confusing
-
-            group_node.inputs["Heightmap"].default_value = bpy.data.images.load(filepath=result_path, check_existing=True)
+            group_node.inputs["Size"].default_value = quad_size
+            img: Image = bpy.data.images.load(filepath=result_path, check_existing=True)
+            img.colorspace_settings.name = 'Raw'
+            group_node.inputs["Heightmap"].default_value = img
             landscape_nodes.links.new(group_node.outputs[0], output_node.inputs[0])
 
             node_modifier: NodesModifier = landscape_obj.modifiers.new("Landscape Geometry", type='NODES')
+            old_group = node_modifier.node_group
             node_modifier.node_group = landscape_nodes
+            bpy.data.node_groups.remove(old_group)
 
             world_collection.objects.link(landscape_obj)
 

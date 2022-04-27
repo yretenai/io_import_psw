@@ -370,7 +370,7 @@ class World:
 
     Actors: list[tuple[str, str, int, Vector, Quaternion, Vector, bool, bool]]  # bools = no shadow, hidden
     OverrideMaterials: list[dict[int, str]]
-    Landscapes: list[tuple[str, int, Vector, Vector, int, float, float]]  # name, actor, pos, size, type, bias, offset
+    Landscapes: list[tuple[str, int, Vector, Vector, int, int, int, int]]  # name, actor, pos, size, type, x, y, quad
 
     NPActors: ndarray
     NPMaterials: ndarray | None
@@ -407,7 +407,7 @@ class World:
                 self.OverrideMaterials[actor_id][material_id] = fix_string_np(material_name)
 
         if self.NPLandscapes is not None and len(self.NPLandscapes) > 0:
-            self.Landscapes = [(fix_string_np(x[0]), x[1], Vector((x[2], -x[3], 0.0)) * resize_by, Vector((x[5], x[5], x[5])) * resize_by, x[4], float(x[6]), float(x[7])) for x in self.NPLandscapes]
+            self.Landscapes = [(fix_string_np(x[0]), x[1], Vector((x[2] + x[5] / 2, -(x[3] + x[5] / 2), 0.0)) * resize_by, Vector((x[5], x[5], x[5])) * resize_by, x[4], x[2], x[3], x[5]) for x in self.NPLandscapes]
 
 
 def read_chunk(stream: typing.BinaryIO) -> tuple[ndarray | None, str]:
