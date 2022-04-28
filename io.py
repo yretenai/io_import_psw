@@ -37,7 +37,7 @@ dispatch: dict[str, DTypeLike] = {
         'ROTTRACK':     dtype([('time', 'f'), ('xyzw', '4f')]),
         'POSTRACK':     dtype([('time', 'f'), ('xyz', '3f')]),
         'WORLDACTORS':  dtype([('name', '64b'), ('asset', '256b'), ('parent', 'i'), ('pos', '3f'), ('rot', '4f'), ('scale', '3f'), ('flags', 'i')]),
-        'LANDSCAPE':    dtype([('name', '256b'), ('actor_id', 'i'), ('x', 'i'), ('y', 'i'), ('type', 'i'), ('size', 'i'), ('scale', 'f'), ('offset', 'f')]),
+        'LANDSCAPE':    dtype([('name', '256b'), ('actor_id', 'i'), ('x', 'i'), ('y', 'i'), ('type', 'i'), ('size', 'i'), ('bias', 'i'), ('offset', '2f'), ('dim', '2i')]),
         'INSTMATERIAL': dtype([('actor_id', 'i'), ('material_id', 'i'), ('name', '64b')])
 }
 
@@ -110,7 +110,7 @@ class Mesh:
         self.Weights = None
         self.Colors = None
         self.UVs = list()
-        self.ShapeKeys = list()
+        self.ShapeKeys = {}
         self.Physics = None
 
         self.NPNormals = None
@@ -372,7 +372,7 @@ class World:
 
     Actors: list[tuple[str, str, int, Vector, Quaternion, Vector, bool, bool]]  # bools = no shadow, hidden
     OverrideMaterials: list[dict[int, str]]
-    Landscapes: list[tuple[str, int, Vector, Vector, int, int, int, int]]  # name, actor, pos, size, type, x, y, quad
+    Landscapes: list[tuple[str, int, Vector, int, int, int, int, float, Vector, Vector]]  # name, actor, pos, size, type, x, y, bias, offset, dim
 
     NPActors: ndarray
     NPMaterials: ndarray | None
@@ -409,7 +409,7 @@ class World:
                 self.OverrideMaterials[actor_id][material_id] = fix_string_np(material_name)
 
         if self.NPLandscapes is not None and len(self.NPLandscapes) > 0:
-            self.Landscapes = [(fix_string_np(x[0]), x[1], Vector((x[2] + x[5] / 2, -(x[3] + x[5] / 2), 0.0)) * resize_by, Vector((x[5], x[5], x[5])) * resize_by, x[4], x[2], x[3], x[5]) for x in self.NPLandscapes]
+            self.Landscapes = [(fix_string_np(x['name']), x['actor_id'], Vector((x['x'] + x['size'] / 2, -(x['y'] + x['size'] / 2), 0.0)), int(x['size']), x['type'], x['x'], x['y'], x['bias'], Vector((x['offset'][0], x['offset'][1], 0.0)), Vector((x['dim'][0], x['dim'][1], 1.0))) for x in self.NPLandscapes]
 
 
 def read_chunk(stream: typing.BinaryIO) -> tuple[ndarray | None, str]:

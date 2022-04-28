@@ -37,7 +37,7 @@ or FModel support these new chunks.
 This addon has **only** been tested in the output of the modified library, of which the mesh exporter has undergone
 significant changes to replicate Gltf exporting behavior and to accomodate for morph targets.
 
-I do not plan or expect for official libraries to support these changes, nor will I support the output files from 
+I do not plan or expect for official libraries to support these changes, nor will I support the output files from
 "normal" programs.
 
 ## Outline of format-level changes
@@ -110,7 +110,7 @@ File identifier for psw files
 
 Single Chunk.
 
-`368 bytes - char[64] name, char[256] asset_path, int parent, FVector position, FQuaternion rotation, FVector scale, 
+`368 bytes - char[64] name, char[256] asset_path, int parent, FVector position, FQuaternion rotation, FVector scale,
 int flags`
 
 Lists actors present in the world.
@@ -127,20 +127,27 @@ Specifies material overrides for a specific actor.
 
 Single Chunk.
 
-`284 bytes - char[256] map_path, int actor_id, float x, float y, int type, int size, float scale, float offset`
+`296 bytes - char[256] map_path, int actor_id, float[2] xy, int type, int size, float height_mod, float[2] offset, int[2] dimensions`
 
-Specifies landscape components, last two values are speculative and uncertain how it functions. 
-These values are the X and Z of the "Bias" property.
+Sector size is a cube of size.
 
-Landscape importing is imprefect at best, and often completely wrong, but it constructs
-the tiles correctly, at least.
+Specifies landscape components. To get the real value of the height, subtract 0.5 and multiply by 2 then by height_mod.
+
+Height_mod is calculated as `256 / (scale.UP + 1)`. When height maps are calculated, the UP value is eqauivalent to
+size.
+
+So if scale.UP is not identical to size, adjust accordingly. You can optimize it by setting the vertical scale to 256
+and ignoring height_mod.
+
+Offset is the offset in the texture map, multiple sectors can subdivide the same texture. `Dimensions` indicates how many 
+sectors should be in the texture.
 
 ## Why an animation format change?
 
-The old format is quite inefficient by duplicating idle keyframes. This leads to ballooned keyframe sizes, along with 
+The old format is quite inefficient by duplicating idle keyframes. This leads to ballooned keyframe sizes, along with
 significant slowdown in Blender when used excessively (i.e. a long animation.)
 
-The new format only stores keyframes if they actually change bone data, resulting in a smaller file and a more 
+The new format only stores keyframes if they actually change bone data, resulting in a smaller file and a more
 traditional approach to animations.
 
 This is a breaking change, thus a different magic value is used.

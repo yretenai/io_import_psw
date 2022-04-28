@@ -111,7 +111,7 @@ class ActorXWorld:
 
         tiles: map[tuple[int, int], tuple[Object, Material, ShaderNodeTexCoord, set[str]]] = {}
 
-        for (tex_path, actor_id, pos, scale, type_id, tile_x, tile_y, quad_size) in self.psw.Landscapes:
+        for (tex_path, actor_id, pos, scale, type_id, tile_x, tile_y, bias, offset, dim) in self.psw.Landscapes:
             result_path = tex_path
             if not result_path.endswith('.png'):
                 result_path += ".png"
@@ -158,22 +158,36 @@ class ActorXWorld:
 
                 continue
 
+            if offset > Vector((0.0, 0.0, 0.0)):
+                # only handle 0, 0
+                continue
+
+            base_scale = Vector((scale, scale, scale))
+            adj_scale = base_scale * dim
+            pos_offset = (adj_scale - base_scale) / 2
+            pos_offset.y *= -1
+            adj_pos = pos + pos_offset
+
+            adj_scale *= self.resize_mod
+            adj_pos *= self.resize_mod
+
             actor = actor_cache[0 if actor_id == -1 else actor_id]
 
             landscape_data: Mesh = bpy.data.meshes.new(actor.name + "_Sector%d_%d" % (tile_x, tile_y))
             landscape_obj: Object = bpy.data.objects.new(name=landscape_data.name, object_data=landscape_data)
             landscape_obj.parent = actor
-            landscape_obj.scale = scale
-            landscape_obj.location = pos
+            landscape_obj.scale = adj_scale
+            landscape_obj.location = adj_pos
 
             landscape_nodes: GeometryNodeTree = bpy.data.node_groups.new(landscape_obj.name, "GeometryNodeTree")
             output_node: NodeGroupOutput = landscape_nodes.nodes.new(type='NodeGroupOutput')
             output_node.location = (400, 0)
             group_node: GeometryNodeGroup = landscape_nodes.nodes.new(type='GeometryNodeGroup')
             group_node.node_tree = bpy.data.node_groups['PSW Height']
-            group_node.inputs["Size"].default_value = quad_size
             img: Image = bpy.data.images.load(filepath=result_path, check_existing=True)
             img.colorspace_settings.name = 'Raw'
+            group_node.inputs["Dimensions"].default_value = dim
+            group_node.inputs["Size"].default_value = bias
             group_node.inputs["Heightmap"].default_value = img
             landscape_nodes.links.new(group_node.outputs[0], output_node.inputs[0])
 
