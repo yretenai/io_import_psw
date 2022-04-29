@@ -96,30 +96,40 @@ class ActorXAnimation:
             (bone, pose_bone, pos_basis, rot_basis) = bones[bone_id]
 
             for frame_id, (keyframe_time, keyframe_rot) in enumerate(self.psa.RotKeys[bone_id]):
-                rot: Quaternion = rot_basis.conjugated()
-                rot.rotate(rot_basis)
-
-                rot_parent: Quaternion = rot_basis.conjugated()
-                if bone.parent is not None:
-                    rot_parent.rotate(keyframe_rot)
+                if self.psa.Additive == 1:
+                    rot: Quaternion = keyframe_rot
                 else:
-                    rot_parent.rotate(keyframe_rot.conjugated())
+                    rot: Quaternion = rot_basis.conjugated()
+                    rot.rotate(rot_basis)
 
-                rot.rotate(rot_parent)
-                rot.conjugate()
+                    rot_parent: Quaternion = rot_basis.conjugated()
+                    if bone.parent is not None:
+                        rot_parent.rotate(keyframe_rot)
+                    else:
+                        rot_parent.rotate(keyframe_rot.conjugated())
+
+                    rot.rotate(rot_parent)
+                    rot.conjugate()
 
                 for i in range(4):
                     fcurve_rot[i].keyframe_points[frame_id].co = keyframe_time + 1, rot[i]
                     fcurve_rot[i].keyframe_points[frame_id].interpolation = 'LINEAR'
 
             for frame_id, (keyframe_time, keyframe_pos) in enumerate(self.psa.PosKeys[bone_id]):
-                pos: Vector = keyframe_pos - pos_basis
-                pos.rotate(rot_basis)
+                if self.psa.Additive > 0:
+                    pos: Vector = keyframe_pos
+                else:
+                    pos: Vector = keyframe_pos - pos_basis
+                    pos.rotate(rot_basis)
 
                 for i in range(3):
                     fcurve_pos[i].keyframe_points[frame_id].co = keyframe_time + 1, pos[i]
                     fcurve_pos[i].keyframe_points[frame_id].interpolation = 'LINEAR'
 
+        action.asset_mark()
+        action.asset_data.tags.new(name='actorx', skip_if_exists=True)
+        action.asset_data.tags.new(name='sequence', skip_if_exists=True)
+        action.asset_generate_preview()
         armature_obj.animation_data.action = action
 
         return {'FINISHED'}

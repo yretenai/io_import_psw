@@ -33,7 +33,7 @@ dispatch: dict[str, DTypeLike] = {
         'ANIMINFO':     dtype([('name', '64b'), ('group', '64b'), ('total_bones', 'i'), ('root_included', 'i'), ('key_compression_style', 'i'), ('key_quotum', 'i'), ('key_reduction', 'f'), ('duration', 'f'), ('frame_rate', 'f'), ('start_bone', 'i'), ('first_frame', 'i'), ('num_frames', 'i')]),
         'ANIMKEYS':     dtype([('pos', '3f'), ('rot', '4f'), ('time', 'f')]),
         'SCALEKEYS':    dtype([('scale', '3f'), ('time', 'f')]),
-        'SEQUENCES':    dtype([('name', '64b'), ('framerate', 'f')]),
+        'SEQUENCES':    dtype([('name', '64b'), ('framerate', 'f'), ('additive', 'i')]),
         'ROTTRACK':     dtype([('time', 'f'), ('xyzw', '4f')]),
         'POSTRACK':     dtype([('time', 'f'), ('xyz', '3f')]),
         'WORLDACTORS':  dtype([('name', '64b'), ('asset', '256b'), ('parent', 'i'), ('pos', '3f'), ('rot', '4f'), ('scale', '3f'), ('flags', 'i')]),
@@ -301,6 +301,7 @@ class AnimationV2:
     NumBones: int
 
     SequenceName: str | None
+    Additive: int
     Bones: list[tuple[str, int, Quaternion, Vector, Vector]] | None
     PosKeys: list[list[tuple[float, Vector]]] | None
     RotKeys: list[list[tuple[float, Quaternion]]] | None
@@ -317,6 +318,7 @@ class AnimationV2:
         self.NumBones = 0
 
         self.SequenceName = None
+        self.Additive = 0
         self.Bones = None
         self.PosKeys = None
         self.RotKeys = None
@@ -346,7 +348,9 @@ class AnimationV2:
         for bone_id, (bone_name, flags, num_children, parent_id, rot, pos, length, scale) in enumerate(self.NPBones):
             self.Bones[bone_id] = (fix_string_np(bone_name), parent_id, Quaternion((rot[3], rot[0], rot[1], rot[2])), Vector(pos) * resize_by, Vector(pos) * resize_by)
 
-        self.SequenceName = fix_string_np(self.NPSequences[0]["name"])
+        self.SequenceName = fix_string_np(self.NPSequences[0]['name'])
+        self.Additive = int(self.NPSequences[0]['additive'])
+        print('Additive = %d' % (self.Additive))
 
         self.PosKeys = [None] * self.NumBones
         self.RotKeys = [None] * self.NumBones
@@ -415,7 +419,7 @@ class World:
 def read_chunk(stream: typing.BinaryIO) -> tuple[ndarray | None, str]:
     (chunk_id, chunk_type, chunk_size, chunk_count) = unpack('20s3i', stream.read(32))
     chunk_id = fix_string(chunk_id)
-    print('Reading %d elements for chunk %s' % (chunk_count, chunk_id))
+    # print('Reading %d elements for chunk %s' % (chunk_count, chunk_id))
     total_size = chunk_size * chunk_count
 
     for chunk_key in dispatch.keys():
@@ -442,7 +446,7 @@ def read_actorx(stream: typing.BinaryIO, settings: dict[str, Property]) -> Anima
         ob = World()
     else:
         return None
-    print('Reading %s' % magic)
+    # print('Reading %s' % magic)
     stream.seek(0, 2)
     size = stream.tell()
     stream.seek(32, 0)

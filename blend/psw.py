@@ -38,7 +38,7 @@ class ActorXWorld:
         context.collection.children.link(world_collection)
         world_layer = context.view_layer.active_layer_collection.children[-1]
 
-        actor_collection = bpy.data.collections.new(self.name + " Actors")
+        actor_collection = bpy.data.collections.new(self.name + ' Actors')
         actor_collection.hide_render = True
         actor_collection.hide_select = True
         actor_collection.hide_viewport = True
@@ -60,7 +60,7 @@ class ActorXWorld:
             elif psk_path != 'None':
                 result_path = psk_path
                 if not result_path.endswith('.psk'):
-                    result_path += ".psk"
+                    result_path += '.psk'
 
                 if sep != '/':
                     result_path = result_path.replace('/', sep)
@@ -82,7 +82,7 @@ class ActorXWorld:
                     psk.execute(context)
                     mesh_cache[mesh_key] = mesh_obj
                 else:
-                    print("Can't find asset %s" % (psk_path))
+                    print('Can\'t find asset %s' % (psk_path))
                     mesh_obj = None
 
             instance = bpy.data.objects.new(name, None)
@@ -111,16 +111,18 @@ class ActorXWorld:
 
         tiles: map[tuple[int, int], tuple[Object, Material, ShaderNodeTexCoord, set[str]]] = {}
 
+        landscape_hosts: set[Object] = set()
+
         for (tex_path, actor_id, pos, scale, type_id, tile_x, tile_y, bias, offset, dim) in self.psw.Landscapes:
             result_path = tex_path
             if not result_path.endswith('.png'):
-                result_path += ".png"
+                result_path += '.png'
             if sep != '/':
                 result_path = result_path.replace('/', sep)
             result_path = normpath(join_path(self.game_dir, result_path))
 
             if not exists(result_path):
-                print("Can't find asset %s" % (tex_path))
+                print('Can\'t find asset %s' % (tex_path))
                 continue
 
             if type_id != 0:
@@ -173,25 +175,26 @@ class ActorXWorld:
 
             actor = actor_cache[0 if actor_id == -1 else actor_id]
 
-            landscape_data: Mesh = bpy.data.meshes.new(actor.name + "_Sector%d_%d" % (tile_x, tile_y))
+            landscape_data: Mesh = bpy.data.meshes.new(actor.name + '_Sector%d_%d' % (tile_x, tile_y))
             landscape_obj: Object = bpy.data.objects.new(name=landscape_data.name, object_data=landscape_data)
             landscape_obj.parent = actor
             landscape_obj.scale = adj_scale
             landscape_obj.location = adj_pos
+            landscape_hosts.add(parent)
 
-            landscape_nodes: GeometryNodeTree = bpy.data.node_groups.new(landscape_obj.name, "GeometryNodeTree")
+            landscape_nodes: GeometryNodeTree = bpy.data.node_groups.new(landscape_obj.name, 'GeometryNodeTree')
             output_node: NodeGroupOutput = landscape_nodes.nodes.new(type='NodeGroupOutput')
             output_node.location = (400, 0)
             group_node: GeometryNodeGroup = landscape_nodes.nodes.new(type='GeometryNodeGroup')
             group_node.node_tree = bpy.data.node_groups['PSW Height']
             img: Image = bpy.data.images.load(filepath=result_path, check_existing=True)
             img.colorspace_settings.name = 'Raw'
-            group_node.inputs["Dimensions"].default_value = dim
-            group_node.inputs["Size"].default_value = bias
-            group_node.inputs["Heightmap"].default_value = img
+            group_node.inputs['Dimensions'].default_value = dim
+            group_node.inputs['Size'].default_value = bias
+            group_node.inputs['Heightmap'].default_value = img
             landscape_nodes.links.new(group_node.outputs[0], output_node.inputs[0])
 
-            node_modifier: NodesModifier = landscape_obj.modifiers.new("Landscape Geometry", type='NODES')
+            node_modifier: NodesModifier = landscape_obj.modifiers.new('Landscape Geometry', type='NODES')
             old_group = node_modifier.node_group
             node_modifier.node_group = landscape_nodes
             bpy.data.node_groups.remove(old_group)
@@ -211,6 +214,12 @@ class ActorXWorld:
             landscape_obj.material_slots[0].material = material_data
 
             tiles[(tile_x, tile_y)] = (landscape_obj, material_data, tex_coord, set())
+
+        for landscape_host in landscape_hosts:
+            landscape_host.asset_mark()
+            landscape_host.asset_data.tags.new(name='actorx', skip_if_exists=True)
+            landscape_host.asset_data.tags.new(name='landscape', skip_if_exists=True)
+            landscape_host.asset_generate_preview()
 
         context.view_layer.active_layer_collection = old_active_layer
 

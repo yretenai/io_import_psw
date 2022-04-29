@@ -104,6 +104,12 @@ class ActorXMesh:
             armature_modifier.use_bone_envelopes = False
             armature_modifier.object = armature_obj
 
+        mesh_obj.asset_mark()
+        mesh_obj.asset_data.tags.new(name='actorx', skip_if_exists=True)
+        if has_armature:
+            mesh_obj.asset_data.tags.new(name='skinned', skip_if_exists=True)
+        mesh_obj.asset_generate_preview()
+
         return {'FINISHED'}
 
     @staticmethod

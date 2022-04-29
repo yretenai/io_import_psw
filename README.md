@@ -48,7 +48,7 @@ Repeated chunk with different suffixes, similar to EXTRAUVS (`MORPHTARGET0`, `MO
 
 Suffix indicates morph target index.
 
-`16 bytes = int vertex_id, FVector position`
+`16 bytes = int vertex_id, Vector position`
 
 Maps wedge indexes to a different location for shape keys (morph target.)
 
@@ -64,7 +64,7 @@ Maps morph target indexes to a non-unique name.
 
 Single Chunk.
 
-`101 bytes - char[64] bone_name, byte type (0 = box, 1 = sphere, 2 = sphylinder), FVector offset, FVector rotation, FVector scale`
+`101 bytes - char[64] bone_name, byte type (0 = box, 1 = sphere, 2 = sphylinder), Vector offset, Vector rotation, Vector scale`
 
 Attaches a shape to a bone.
 
@@ -78,9 +78,15 @@ If the file signature is ANIXHEAD, expect SEQUENCES, POSTRACK and ROTTRACK strea
 
 Single Chunk.
 
-`68 bytes - char[64] name, float32 frame_rate`
+`72 bytes - char[64] name, float frame_rate, int additive_mode`
 
 Lists sequences present in the file, along with it's projected frame rate.
+
+`additive_mode` =
+
+0. None
+1. Both Position and Rotation are handled additively
+2. Only position is handled additively(?)
 
 ### PSA - ROTTRACK#:#
 
@@ -88,7 +94,7 @@ Repeated chunk with different suffixes, different to EXTRAUVS.
 
 Suffix indicates both the sequence and bone index: `ROTTRACK[SEQUENCEID]:[BONEID]` = `ROTTRACK0:0`, `ROTTRACK0:1`
 
-`20 bytes - float32 time, FQuaternion rotation`
+`20 bytes - float time, Quaternion rotation`
 
 Rotation keyframes for each sequence, bone and point in time. Will be interpolated linearly by Blender.
 
@@ -98,7 +104,7 @@ Repeated chunk with different suffixes, different to EXTRAUVS.
 
 Suffix indicates both the sequence and bone index: `POSTRACK[SEQUENCEID]:[BONEID]` = `ROTTRACK0:0`, `ROTTRACK0:1`
 
-`16 bytes - float32 time, FVector position`
+`16 bytes - float time, Vector position`
 
 Location keyframes for each sequence, bone and point in time. Will be interpolated linearly by Blender.
 
@@ -106,11 +112,11 @@ Location keyframes for each sequence, bone and point in time. Will be interpolat
 
 File identifier for psw files
 
-### PSA - WORLDACTORS
+### PSW - WORLDACTORS
 
 Single Chunk.
 
-`368 bytes - char[64] name, char[256] asset_path, int parent, FVector position, FQuaternion rotation, FVector scale,
+`368 bytes - char[64] name, char[256] asset_path, int parent, Vector position, Quaternion rotation, Vector scale,
 int flags`
 
 Lists actors present in the world.
