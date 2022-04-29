@@ -129,7 +129,6 @@ class ActorXAnimation:
         action.asset_mark()
         action.asset_data.tags.new(name='actorx', skip_if_exists=True)
         action.asset_data.tags.new(name='sequence', skip_if_exists=True)
-        action.asset_generate_preview()
         armature_obj.animation_data.action = action
 
         return {'FINISHED'}
