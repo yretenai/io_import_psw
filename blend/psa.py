@@ -126,9 +126,9 @@ class ActorXAnimation:
                     fcurve_pos[i].keyframe_points[frame_id].co = keyframe_time + 1, pos[i]
                     fcurve_pos[i].keyframe_points[frame_id].interpolation = 'LINEAR'
 
-        action.asset_mark()
-        action.asset_data.tags.new(name='actorx', skip_if_exists=True)
-        action.asset_data.tags.new(name='sequence', skip_if_exists=True)
+        # action.asset_mark()
+        # action.asset_data.tags.new(name='actorx', skip_if_exists=True)
+        # action.asset_data.tags.new(name='sequence', skip_if_exists=True)
         armature_obj.animation_data.action = action
 
         return {'FINISHED'}

@@ -111,7 +111,7 @@ class ActorXWorld:
 
         tiles: map[tuple[int, int], tuple[Object, Material, ShaderNodeTexCoord, set[str]]] = {}
 
-        landscape_hosts: set[Object] = set()
+        # landscape_hosts: set[Object] = set()
 
         for (tex_path, actor_id, pos, scale, type_id, tile_x, tile_y, bias, offset, dim) in self.psw.Landscapes:
             result_path = tex_path
@@ -180,7 +180,7 @@ class ActorXWorld:
             landscape_obj.parent = actor
             landscape_obj.scale = adj_scale
             landscape_obj.location = adj_pos
-            landscape_hosts.add(parent)
+            # landscape_hosts.add(parent)
 
             landscape_nodes: GeometryNodeTree = bpy.data.node_groups.new(landscape_obj.name, 'GeometryNodeTree')
             output_node: NodeGroupOutput = landscape_nodes.nodes.new(type='NodeGroupOutput')
@@ -215,11 +215,11 @@ class ActorXWorld:
 
             tiles[(tile_x, tile_y)] = (landscape_obj, material_data, tex_coord, set())
 
-        for landscape_host in landscape_hosts:
-            landscape_host.asset_mark()
-            landscape_host.asset_data.tags.new(name='actorx', skip_if_exists=True)
-            landscape_host.asset_data.tags.new(name='landscape', skip_if_exists=True)
-            landscape_host.asset_generate_preview()
+        # for landscape_host in landscape_hosts:
+        #     landscape_host.asset_mark()
+        #     landscape_host.asset_data.tags.new(name='actorx', skip_if_exists=True)
+        #     landscape_host.asset_data.tags.new(name='landscape', skip_if_exists=True)
+        #     landscape_host.asset_generate_preview()
 
         context.view_layer.active_layer_collection = old_active_layer
 
