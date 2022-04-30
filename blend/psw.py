@@ -164,11 +164,15 @@ class ActorXWorld:
                 # only handle 0, 0
                 continue
 
-            base_scale = Vector((scale, scale, scale))
+            base_scale = Vector((scale, scale, 255))
             adj_scale = base_scale * dim
             pos_offset = (adj_scale - base_scale) / 2
             pos_offset.y *= -1
             adj_pos = pos + pos_offset
+            global_offset = ((scale + 1) / 2) - 1
+            adj_pos.x += global_offset
+            adj_pos.y -= global_offset
+            adj_pos.z = -bias / 1000
 
             adj_scale *= self.resize_mod
             adj_pos *= self.resize_mod
@@ -190,7 +194,6 @@ class ActorXWorld:
             img: Image = bpy.data.images.load(filepath=result_path, check_existing=True)
             img.colorspace_settings.name = 'Raw'
             group_node.inputs['Dimensions'].default_value = dim
-            group_node.inputs['Size'].default_value = bias
             group_node.inputs['Heightmap'].default_value = img
             landscape_nodes.links.new(group_node.outputs[0], output_node.inputs[0])
 

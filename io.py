@@ -413,7 +413,7 @@ class World:
                 self.OverrideMaterials[actor_id][material_id] = fix_string_np(material_name)
 
         if self.NPLandscapes is not None and len(self.NPLandscapes) > 0:
-            self.Landscapes = [(fix_string_np(x['name']), x['actor_id'], Vector((x['x'] + x['size'] / 2, -(x['y'] + x['size'] / 2), 0.0)), int(x['size']), x['type'], x['x'], x['y'], x['bias'], Vector((x['offset'][0], x['offset'][1], 0.0)), Vector((x['dim'][0], x['dim'][1], 1.0))) for x in self.NPLandscapes]
+            self.Landscapes = [(fix_string_np(x['name']), x['actor_id'], Vector((x['x'], -x['y'], 0)), int(x['size']), x['type'], x['x'], x['y'], x['bias'], Vector((x['offset'][0], x['offset'][1], 0.0)), Vector((x['dim'][0], x['dim'][1], 1.0))) for x in self.NPLandscapes]
 
 
 def read_chunk(stream: typing.BinaryIO) -> tuple[ndarray | None, str]:
