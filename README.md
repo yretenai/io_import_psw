@@ -5,6 +5,7 @@ ActorX PSK/PSA importer for Blender 3.0+
 ## Installation
 
 - Download the repository (`Code -> Download ZIP` in the top right, or clone the repository.)
+- Remove `-develop` from the filename.
 - Open Blender.
 - Navigate through Edit -> Preferences -> Addons.
 - Click "Install..."
