@@ -29,7 +29,7 @@ dispatch: dict[str, DTypeLike] = {
         'MORPHTARGET':  dtype([('vertex_id', 'i'), ('xyz', '3f')]),
         'MORPHNAMES':   dtype([('name', '64b')]),
         'PHYSICS0':     dtype([('name', '64b'), ('type', 'B'), ('center', '3f'), ('rot', '3f'), ('scale', '3f')]),
-        'SHAPEELEMS':   dtype([('name', '64b'), ('type', 'i'), ('center', '3f'), ('D:\rot', '4f'), ('scale', '3f')]),
+        'SHAPEELEMS':   dtype([('name', '64b'), ('type', 'i'), ('center', '3f'), ('rot', '4f'), ('scale', '3f')]),
         'ANIMINFO':     dtype([('name', '64b'), ('group', '64b'), ('total_bones', 'i'), ('root_included', 'i'), ('key_compression_style', 'i'), ('key_quotum', 'i'), ('key_reduction', 'f'), ('duration', 'f'), ('frame_rate', 'f'), ('start_bone', 'i'), ('first_frame', 'i'), ('num_frames', 'i')]),
         'ANIMKEYS':     dtype([('pos', '3f'), ('rot', '4f'), ('time', 'f')]),
         'SCALEKEYS':    dtype([('scale', '3f'), ('time', 'f')]),
