@@ -1,6 +1,8 @@
 # io_import_pskx
 
-ActorX PSK/PSA importer for Blender 3.0+
+Experimental ActorX PSK/PSA importer for Blender 3.0+
+
+I strongly recommend that you use https://github.com/DarklightGames/io_scene_psk_psa over this repo as I have only tested it with my custom sub-formats for PSK.
 
 ## Installation
 
