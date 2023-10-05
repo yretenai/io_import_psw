@@ -21,7 +21,7 @@ dispatch: dict[str, DTypeLike] = {
         'MATT0000':     dtype([('name', '64b'), ('tex_id', 'i'), ('poly_flags', 'I'), ('aux_mat_id', 'i'), ('aux_flags', 'I'), ('lod_bias', 'i'), ('lod_style', 'i')]),
         'REFSKELT':     dtype([('name', '64b'), ('flags', 'I'), ('num_children', 'i'), ('parent_id', 'i'), ('rot', '4f'), ('pos', '3f'), ('length', 'f'), ('scale', '3f')]),
         'REFSKEL0':     dtype([('name', '64b'), ('flags', 'I'), ('num_children', 'i'), ('parent_id', 'i'), ('rot', '4f'), ('pos', '3f'), ('length', 'f'), ('scale', '3f')]),
-        'SKELSOCK':     dtype([('name', '64b'), ('bone_name', '64b'), ('pos', '3f'), ('rot', '3f'), ('scale', '3f')])
+        'SKELSOCK':     dtype([('name', '64b'), ('bone_name', '64b'), ('pos', '3f'), ('rot', '3f'), ('scale', '3f')]),
         'BONENAMES':    dtype([('name', '64b'), ('flags', 'I'), ('num_children', 'i'), ('parent_id', 'i'), ('rot', '4f'), ('pos', '3f'), ('length', 'f'), ('scale', '3f')]),
         'RAWWEIGHTS':   dtype([('weight', 'f'), ('vertex_id', 'i'), ('bone_id', 'i')]),
         'RAWW0000':     dtype([('weight', 'f'), ('vertex_id', 'i'), ('bone_id', 'i')]),
@@ -67,6 +67,7 @@ class Mesh:
     NumShapes: int
     NumUVs: int
     NumBones: int
+    NumSockets: int
     NumHitboxes: int
 
     Vertices: list[list[float]]
@@ -77,6 +78,7 @@ class Mesh:
     MaterialNames: list[str] | None
     Bones: list[tuple[str, int, Quaternion, Vector, Vector]] | None
     Weights: list[tuple[int, int, float]] | None
+    Sockets: list[tuple[str, str, Vector, Vector, Vector]] | None
     Colors: list[list[float]] | None
     UVs: list[list[float]]
     ShapeKeys: dict[str, list[float]]
@@ -102,6 +104,7 @@ class Mesh:
         self.NumUVs = 0
         self.NumBones = 0
         self.NumHitboxes = 0
+        self.NumSockets = 0
 
         self.Normals = None
         self.Tangents = None
@@ -113,6 +116,7 @@ class Mesh:
         self.UVs = list()
         self.ShapeKeys = {}
         self.Physics = None
+        self.Sockets = None
 
         self.NPNormals = None
         self.NPTangents = None
@@ -124,6 +128,7 @@ class Mesh:
         self.NPShapeKeys = list()
         self.NPShapeNames = None
         self.NPPhysics = None
+        self.NPSockets = None
 
     def __setitem__(self, key: str, value: ndarray):
         if key == 'PNTS0000':
@@ -135,7 +140,7 @@ class Mesh:
         elif key == 'VTXNORMS':
             self.NPNormals = value
         elif key == 'VTXTANGS':
-            self.NPNormals = value
+            self.NPTangents = value
         elif key == 'MATT0000':
             self.NPMaterials = value
         elif key == 'REFSKELT' or key == 'REFSKEL0' or key == 'BONENAMES':
@@ -144,6 +149,8 @@ class Mesh:
             self.NPWeights = value
         elif key == 'VERTEXCOLOR':
             self.NPColors = value
+        elif key == 'SKELSOCK':
+            self.NPSockets = value
         elif key[:8] == 'EXTRAUVS':
             self.NPUVs.append(value)
         elif key[:11] == 'MORPHTARGET':
@@ -154,7 +161,7 @@ class Mesh:
             self.NPPhysics = value
 
     def finalize(self, settings: dict[str, Property]):
-        # todo(naomi): investigate if this can be converted to numpy.
+        # todo(ada): investigate if this can be converted to numpy.
         self.NumVertices = len(self.NPWedges)
         self.NumFaces = len(self.NPFaces)
 
@@ -181,10 +188,11 @@ class Mesh:
 
         if self.NPNormals is not None and len(self.NPNormals) > 0:
             self.Normals = [None] * self.NumVertices
+            print(len(self.Normals), len(self.NPNormals['xyz']))
             for wedge_id, rgb in enumerate(self.NPNormals['xyz']):
                 self.Normals[wedge_id] = rgb
 
-        if self.NPTangents is not None and len(self.NPNormals) > 0:
+        if self.NPTangents is not None and len(self.NPTangents) > 0:
             self.Tangents = [None] * self.NumVertices
             for wedge_id, rgb in enumerate(self.NPTangents['xyzw']):
                 self.Tangents[wedge_id] = rgb
@@ -203,6 +211,12 @@ class Mesh:
 
         if self.NPWeights is not None and len(self.NPWeights) > 0:
             self.Weights = self.NPWeights.tolist()
+
+        if self.NPSockets is not None and len(self.NPSockets) > 0:
+            self.NumSockets = len(self.NPSockets)
+            self.Sockets = [None] * self.NumSockets
+            for socket_id, (socket_name, bone_name, pos, rot, scale) in enumerate(self.NPSockets):
+                self.Sockets[socket_id] = (fix_string_np(socket_name), fix_string_np(bone_name), Vector((pos[0], pos[1], pos[2])) * resize_by, Vector((rot[0], rot[1], rot[2])), Vector((scale[0], scale[1], scale[2])) * resize_by)
 
         if self.NPColors is not None and len(self.NPColors) > 0:
             self.Colors = [None] * self.NumFaces * 3
@@ -234,7 +248,7 @@ class Mesh:
 
         if self.NPPhysics is not None and len(self.NPPhysics) > 0:
             self.NumHitboxes = len(self.NPPhysics)
-            # todo(naomi): physics
+            # todo(ada): physics
 
 
 class Animation:

@@ -39,6 +39,8 @@ class ActorXMesh:
         armature_data: Armature | None = None
         armature_obj: Object | None = None
 
+        has_sockets: bool = self.psk.Sockets is not None and has_armature
+
         for material_id, material_name in enumerate(self.psk.MaterialNames):
             if material_id in self.override_materials:
                 material_name = self.override_materials[material_id]
@@ -104,11 +106,15 @@ class ActorXMesh:
             armature_modifier.use_bone_envelopes = False
             armature_modifier.object = armature_obj
 
+            if has_sockets:
+                # todo(ada): sockets
+                pass
+
         # mesh_obj.asset_mark()
         # mesh_obj.asset_data.tags.new(name='actorx', skip_if_exists=True)
         # if has_armature:
         #     mesh_obj.asset_data.tags.new(name='skinned', skip_if_exists=True)
-        mesh_obj.asset_generate_preview()
+        # mesh_obj.asset_generate_preview()
 
         return {'FINISHED'}
 
