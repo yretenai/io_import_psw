@@ -21,6 +21,7 @@ dispatch: dict[str, DTypeLike] = {
         'MATT0000':     dtype([('name', '64b'), ('tex_id', 'i'), ('poly_flags', 'I'), ('aux_mat_id', 'i'), ('aux_flags', 'I'), ('lod_bias', 'i'), ('lod_style', 'i')]),
         'REFSKELT':     dtype([('name', '64b'), ('flags', 'I'), ('num_children', 'i'), ('parent_id', 'i'), ('rot', '4f'), ('pos', '3f'), ('length', 'f'), ('scale', '3f')]),
         'REFSKEL0':     dtype([('name', '64b'), ('flags', 'I'), ('num_children', 'i'), ('parent_id', 'i'), ('rot', '4f'), ('pos', '3f'), ('length', 'f'), ('scale', '3f')]),
+        'SKELSOCK':     dtype([('name', '64b'), ('bone_name', '64b'), ('pos', '3f'), ('rot', '3f'), ('scale', '3f')])
         'BONENAMES':    dtype([('name', '64b'), ('flags', 'I'), ('num_children', 'i'), ('parent_id', 'i'), ('rot', '4f'), ('pos', '3f'), ('length', 'f'), ('scale', '3f')]),
         'RAWWEIGHTS':   dtype([('weight', 'f'), ('vertex_id', 'i'), ('bone_id', 'i')]),
         'RAWW0000':     dtype([('weight', 'f'), ('vertex_id', 'i'), ('bone_id', 'i')]),

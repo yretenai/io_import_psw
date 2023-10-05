@@ -34,7 +34,7 @@ To import a PSK or PSA file, use the appropriate importer from `File -> Import -
 A lot of functionality in this addon is non-standard, such as the inclusion of custom chunks like `MORPHTARGET` and the
 custom `ANIXHEAD` animation format. These are described below.
 
-These are implemented in my fork of [CUE4Parse](https://github.colm/yretenai/CUE4Parse), as of right now neither UModel
+These are implemented in my fork of [CUE4Parse](https://github.com/yretenai/CUE4Parse), as of right now neither UModel
 or FModel support these new chunks.
 
 This addon has **only** been tested in the output of the modified library, of which the mesh exporter has undergone
