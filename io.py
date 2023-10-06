@@ -188,7 +188,6 @@ class Mesh:
 
         if self.NPNormals is not None and len(self.NPNormals) > 0:
             self.Normals = [None] * self.NumVertices
-            print(len(self.Normals), len(self.NPNormals['xyz']))
             for wedge_id, rgb in enumerate(self.NPNormals['xyz']):
                 self.Normals[wedge_id] = rgb
 

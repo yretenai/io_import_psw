@@ -140,7 +140,7 @@ class ActorXWorld:
                 # create nodes
                 image_node: ShaderNodeTexImage = node_tree.nodes.new(type='ShaderNodeTexImage')
                 image_node.image = bpy.data.images.load(filepath=result_path, check_existing=True)
-                image_node.image.colorspace_settings.name = 'Raw'
+                image_node.image.colorspace_settings.name = 'Non-Color'
                 image_node.interpolation = 'Cubic'
                 image_node.extension = 'EXTEND'
                 image_node.location = tex_coord.location + Vector((240, -((type_id - 1) * 280)))
@@ -157,6 +157,8 @@ class ActorXWorld:
                 node_tree.links.new(tex_coord.outputs['Generated'], image_node.inputs['Vector'])
                 node_tree.links.new(image_node.outputs['Color'], separate_xyz.inputs['Vector'])
                 node_tree.links.new(image_node.outputs['Alpha'], reroute.inputs[0])
+
+                # todo: X, Y, Z, or W needs to be connected to the Invert Alpha node
 
                 continue
 
@@ -187,20 +189,27 @@ class ActorXWorld:
             # landscape_hosts.add(parent)
 
             landscape_nodes: GeometryNodeTree = bpy.data.node_groups.new(landscape_obj.name, 'GeometryNodeTree')
+            if hasattr(landscape_nodes, 'outputs'):
+                landscape_nodes.outputs.new('NodeSocketGeometry')
+            elif hasattr(landscape_nodes, 'interface'):
+                landscape_nodes.interface.new_socket('Geometry', in_out={'OUTPUT'}, socket_type='NodeSocketGeometry')
             output_node: NodeGroupOutput = landscape_nodes.nodes.new(type='NodeGroupOutput')
             output_node.location = (400, 0)
+            output_node.is_active_output = True
+            output_node.select = False
             group_node: GeometryNodeGroup = landscape_nodes.nodes.new(type='GeometryNodeGroup')
             group_node.node_tree = bpy.data.node_groups['PSW Height']
+            group_node.select = False
             img: Image = bpy.data.images.load(filepath=result_path, check_existing=True)
-            img.colorspace_settings.name = 'Raw'
+            img.colorspace_settings.name = 'Non-Color'
             group_node.inputs['Dimensions'].default_value = dim
             group_node.inputs['Heightmap'].default_value = img
             landscape_nodes.links.new(group_node.outputs[0], output_node.inputs[0])
 
             node_modifier: NodesModifier = landscape_obj.modifiers.new('Landscape Geometry', type='NODES')
-            old_group = node_modifier.node_group
+            if node_modifier.node_group is not None:
+                bpy.data.node_groups.remove(node_modifier.node_group)
             node_modifier.node_group = landscape_nodes
-            bpy.data.node_groups.remove(old_group)
 
             world_collection.objects.link(landscape_obj)
 
@@ -208,9 +217,13 @@ class ActorXWorld:
 
             if material_data is None:
                 material_data = bpy.data.materials.new(landscape_data.name)
+                material_data.blend_method = 'HASHED'
                 material_data.use_nodes = True
                 tex_coord = material_data.node_tree.nodes.new(type='ShaderNodeTexCoord')
                 tex_coord.location = material_data.node_tree.nodes['Principled BSDF'].location + Vector((-1200, 0))
+                invert_color: ShaderNodeInvert = material_data.node_tree.nodes.new(type='ShaderNodeInvert')
+                invert_color.location = material_data.node_tree.nodes['Principled BSDF'].location + Vector((-300, 0))
+                material_data.node_tree.links.new(invert_color.outputs['Color'], bsdf.inputs['Alpha'])
 
             landscape_data.materials.append(material_data)
             landscape_obj.material_slots[0].link = 'OBJECT'
