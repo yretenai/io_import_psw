@@ -37,6 +37,7 @@ dispatch: dict[str, DTypeLike] = {
         'SEQUENCES':    dtype([('name', '64b'), ('framerate', 'f'), ('additive', 'i')]),
         'ROTTRACK':     dtype([('time', 'f'), ('xyzw', '4f')]),
         'POSTRACK':     dtype([('time', 'f'), ('xyz', '3f')]),
+        'SCLTRACK':     dtype([('time', 'f'), ('xyz', '3f')]),
         'WORLDACTORS':  dtype([('name', '64b'), ('asset', '256b'), ('parent', 'i'), ('pos', '3f'), ('rot', '4f'), ('scale', '3f'), ('flags', 'i')]),
         'LANDSCAPE':    dtype([('name', '256b'), ('actor_id', 'i'), ('x', 'i'), ('y', 'i'), ('type', 'i'), ('size', 'i'), ('bias', 'i'), ('offset', '2f'), ('dim', '2i')]),
         'INSTMATERIAL': dtype([('actor_id', 'i'), ('material_id', 'i'), ('name', '64b')])
@@ -318,8 +319,10 @@ class AnimationV2:
     Additive: int
     Bones: list[tuple[str, int, Quaternion, Vector, Vector]] | None
     PosKeys: list[list[tuple[float, Vector]]] | None
+    SclKeys: list[list[tuple[float, Quaternion]]] | None
     RotKeys: list[list[tuple[float, Quaternion]]] | None
     PosKeyLength = list[int]
+    SclKeyLength = list[int]
     RotKeyLength = list[int]
 
     NPBones: ndarray | None
@@ -342,6 +345,7 @@ class AnimationV2:
         self.NPBones = None
         self.NPSequences = None
         self.NPPosTracks = list()
+        self.NPSclTracks = list()
         self.NPRotTracks = list()
 
     def __setitem__(self, key: str, value: ndarray):
@@ -353,6 +357,8 @@ class AnimationV2:
             self.NPPosTracks.append(value)
         elif key[:8] == 'ROTTRACK':
             self.NPRotTracks.append(value)
+        elif key[:8] == 'SCLTRACK':
+            self.NPSclTracks.append(value)
 
     def finalize(self, settings: dict[str, Property]):
         resize_by: float = settings['resize_by'] if 'resize_by' in settings else 0.01
@@ -367,8 +373,10 @@ class AnimationV2:
         print('Additive = %d' % (self.Additive))
 
         self.PosKeys = [None] * self.NumBones
+        self.SclKeys = [None] * self.NumBones
         self.RotKeys = [None] * self.NumBones
         self.PosKeyLength = [len(keys) for keys in self.NPPosTracks]
+        self.SclKeyLength = [len(keys) for keys in self.NPSclTracks]
         self.RotKeyLength = [len(keys) for keys in self.NPRotTracks]
 
         for bone_id in range(self.NumBones):
@@ -376,6 +384,12 @@ class AnimationV2:
             self.PosKeys[bone_id] = [None] * len(NBBonePosKeys)
             for pos_id, (time, pos) in enumerate(NBBonePosKeys):
                 self.PosKeys[bone_id][pos_id] = (time, Vector(pos) * resize_by)
+
+            if len(NPSclTracks) > bone_id:
+                NBBoneSclKeys: list[tuple[time, list[float]]] = self.NPSclTracks[bone_id].tolist()
+                self.SclKeys[bone_id] = [None] * len(NBBoneSclKeys)
+                for Scl_id, (time, Scl) in enumerate(NBBoneSclKeys):
+                    self.SclKeys[bone_id][Scl_id] = (time, Vector(Scl) * resize_by)
 
             NBBoneRotKeys: list[tuple[time, list[float]]] = self.NPRotTracks[bone_id].tolist()
             self.RotKeys[bone_id] = [None] * len(NBBoneRotKeys)

@@ -50,7 +50,7 @@ class ActorXAnimation:
         armature_data: Armature = armature_obj.data
 
         bone_map: dict[str, Bone] = {bone['actorx:full_bone_name']: bone for bone in armature_data.bones}
-        bones: list[tuple[Bone, PoseBone, Vector, Quaternion]] = [None] * self.psa.NumBones
+        bones: list[tuple[Bone, PoseBone, Vector, Vector, Quaternion]] = [None] * self.psa.NumBones
 
         if armature_obj.animation_data is None:
             armature_obj.animation_data_create()
@@ -62,7 +62,8 @@ class ActorXAnimation:
             pose_bone: PoseBone = armature_obj.pose.bones[bone.name]
             rot_basis: Any = bone['actorx:bind_rest_rot']
             pos_basis: Any = bone['actorx:bind_rest_pos']
-            bones[bone_id] = (bone, pose_bone, Vector(pos_basis), Quaternion(rot_basis))
+            scl_basis: Any = bone['actorx:bind_rest_scl']
+            bones[bone_id] = (bone, pose_bone, Vector(pos_basis), Vector(scl_basis), Quaternion(rot_basis))
 
         action: Action = bpy.data.actions.new(name=self.psa.SequenceName)
 
@@ -72,19 +73,24 @@ class ActorXAnimation:
             if bones[bone_id] is None:
                 continue
 
-            (_, pose_bone, _, _) = bones[bone_id]
+            (_, pose_bone, _, _, _) = bones[bone_id]
 
             data_path_rot: str = pose_bone.path_from_id('rotation_quaternion')
             data_path_pos: str = pose_bone.path_from_id('location')
+            data_path_scl: str = pose_bone.path_from_id('scale')
 
             rot: list[FCurve] = [action.fcurves.new(data_path_rot, index=index) for index in range(4)]
             pos: list[FCurve] = [action.fcurves.new(data_path_pos, index=index) for index in range(3)]
+            scl: list[FCurve] = [action.fcurves.new(data_path_scl, index=index) for index in range(3)]
 
             for fcurve in rot:
                 fcurve.keyframe_points.add(self.psa.RotKeyLength[bone_id])
 
             for fcurve in pos:
                 fcurve.keyframe_points.add(self.psa.PosKeyLength[bone_id])
+
+            for fcurve in scl:
+                fcurve.keyframe_points.add(self.psa.SclKeyLength[bone_id])
 
             fcurves[bone_id] = (rot, pos)
 
@@ -93,7 +99,7 @@ class ActorXAnimation:
                 continue
 
             (fcurve_rot, fcurve_pos) = fcurves[bone_id]
-            (bone, pose_bone, pos_basis, rot_basis) = bones[bone_id]
+            (bone, pose_bone, pos_basis, scl_basis, rot_basis) = bones[bone_id]
 
             for frame_id, (keyframe_time, keyframe_rot) in enumerate(self.psa.RotKeys[bone_id]):
                 if self.psa.Additive == 1:
@@ -125,6 +131,17 @@ class ActorXAnimation:
                 for i in range(3):
                     fcurve_pos[i].keyframe_points[frame_id].co = keyframe_time + 1, pos[i]
                     fcurve_pos[i].keyframe_points[frame_id].interpolation = 'LINEAR'
+
+            for frame_id, (keyframe_time, keyframe_scl) in enumerate(self.psa.SclKeys[bone_id]):
+                if self.psa.Additive > 0:
+                    scl: Vector = keyframe_scl
+                else:
+                    scl: Vector = keyframe_scl - scl_basis
+                    scl.rotate(rot_basis)
+
+                for i in range(3):
+                    fcurve_scl[i].keyframe_points[frame_id].co = keyframe_time + 1, scl[i]
+                    fcurve_scl[i].keyframe_points[frame_id].interpolation = 'LINEAR'
 
         # action.asset_mark()
         # action.asset_data.tags.new(name='actorx', skip_if_exists=True)

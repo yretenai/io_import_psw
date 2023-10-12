@@ -157,6 +157,7 @@ class ActorXMesh:
 
             edit_bone['actorx:bind_rest_rot'] = bone_rot.copy()
             edit_bone['actorx:bind_rest_pos'] = bone_pos.copy()
+            edit_bone['actorx:bind_rest_scl'] = bone_scale.copy()
 
         bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
 
