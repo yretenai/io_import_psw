@@ -67,7 +67,7 @@ class ActorXAnimation:
 
         action: Action = bpy.data.actions.new(name=self.psa.SequenceName)
 
-        fcurves: list[tuple[list[FCurve], list[FCurve]]] = [None] * self.psa.NumBones
+        fcurves: list[tuple[list[FCurve], list[FCurve], list[FCurve]]] = [None] * self.psa.NumBones
 
         for bone_id in range(self.psa.NumBones):
             if bones[bone_id] is None:
@@ -92,17 +92,17 @@ class ActorXAnimation:
             for fcurve in scl:
                 fcurve.keyframe_points.add(self.psa.SclKeyLength[bone_id])
 
-            fcurves[bone_id] = (rot, pos)
+            fcurves[bone_id] = (rot, pos, scl)
 
         for bone_id in range(self.psa.NumBones):
             if fcurves[bone_id] is None:
                 continue
 
-            (fcurve_rot, fcurve_pos) = fcurves[bone_id]
+            (fcurve_rot, fcurve_pos, fcurve_scl) = fcurves[bone_id]
             (bone, pose_bone, pos_basis, scl_basis, rot_basis) = bones[bone_id]
 
             for frame_id, (keyframe_time, keyframe_rot) in enumerate(self.psa.RotKeys[bone_id]):
-                if self.psa.Additive == 1:
+                if self.psa.Additive:
                     rot: Quaternion = keyframe_rot
                 else:
                     rot: Quaternion = rot_basis.conjugated()
@@ -122,7 +122,7 @@ class ActorXAnimation:
                     fcurve_rot[i].keyframe_points[frame_id].interpolation = 'LINEAR'
 
             for frame_id, (keyframe_time, keyframe_pos) in enumerate(self.psa.PosKeys[bone_id]):
-                if self.psa.Additive > 0:
+                if self.psa.Additive:
                     pos: Vector = keyframe_pos
                 else:
                     pos: Vector = keyframe_pos - pos_basis
@@ -133,11 +133,10 @@ class ActorXAnimation:
                     fcurve_pos[i].keyframe_points[frame_id].interpolation = 'LINEAR'
 
             for frame_id, (keyframe_time, keyframe_scl) in enumerate(self.psa.SclKeys[bone_id]):
-                if self.psa.Additive > 0:
-                    scl: Vector = keyframe_scl
+                if self.psa.Additive:
+                    scl: Vector = keyframe_scl * self.psa.ResizeBy
                 else:
                     scl: Vector = keyframe_scl - scl_basis
-                    scl.rotate(rot_basis)
 
                 for i in range(3):
                     fcurve_scl[i].keyframe_points[frame_id].co = keyframe_time + 1, scl[i]

@@ -316,7 +316,8 @@ class AnimationV2:
     NumBones: int
 
     SequenceName: str | None
-    Additive: int
+    Additive: bool
+    ResizeBy: float
     Bones: list[tuple[str, int, Quaternion, Vector, Vector]] | None
     PosKeys: list[list[tuple[float, Vector]]] | None
     SclKeys: list[list[tuple[float, Quaternion]]] | None
@@ -335,7 +336,8 @@ class AnimationV2:
         self.NumBones = 0
 
         self.SequenceName = None
-        self.Additive = 0
+        self.Additive = False
+        self.ResizeBy = 1.0
         self.Bones = None
         self.PosKeys = None
         self.RotKeys = None
@@ -366,10 +368,10 @@ class AnimationV2:
         self.NumBones = len(self.NPBones)
         self.Bones = [None] * self.NumBones
         for bone_id, (bone_name, flags, num_children, parent_id, rot, pos, length, scale) in enumerate(self.NPBones):
-            self.Bones[bone_id] = (fix_string_np(bone_name), parent_id, Quaternion((rot[3], rot[0], rot[1], rot[2])), Vector(pos) * resize_by, Vector(pos) * resize_by)
+            self.Bones[bone_id] = (fix_string_np(bone_name), parent_id, Quaternion((rot[3], rot[0], rot[1], rot[2])), Vector(pos) * resize_by, Vector(scale))
 
         self.SequenceName = fix_string_np(self.NPSequences[0]['name'])
-        self.Additive = int(self.NPSequences[0]['additive'])
+        self.Additive = bool(self.NPSequences[0]['additive'])
         print('Additive = %d' % (self.Additive))
 
         self.PosKeys = [None] * self.NumBones
@@ -379,17 +381,19 @@ class AnimationV2:
         self.SclKeyLength = [len(keys) for keys in self.NPSclTracks]
         self.RotKeyLength = [len(keys) for keys in self.NPRotTracks]
 
+        self.ResizeBy = resize_by
+
         for bone_id in range(self.NumBones):
             NBBonePosKeys: list[tuple[time, list[float]]] = self.NPPosTracks[bone_id].tolist()
             self.PosKeys[bone_id] = [None] * len(NBBonePosKeys)
             for pos_id, (time, pos) in enumerate(NBBonePosKeys):
                 self.PosKeys[bone_id][pos_id] = (time, Vector(pos) * resize_by)
 
-            if len(NPSclTracks) > bone_id:
+            if len(self.NPSclTracks) > bone_id:
                 NBBoneSclKeys: list[tuple[time, list[float]]] = self.NPSclTracks[bone_id].tolist()
                 self.SclKeys[bone_id] = [None] * len(NBBoneSclKeys)
                 for Scl_id, (time, Scl) in enumerate(NBBoneSclKeys):
-                    self.SclKeys[bone_id][Scl_id] = (time, Vector(Scl) * resize_by)
+                    self.SclKeys[bone_id][Scl_id] = (time, Vector(Scl))
 
             NBBoneRotKeys: list[tuple[time, list[float]]] = self.NPRotTracks[bone_id].tolist()
             self.RotKeys[bone_id] = [None] * len(NBBoneRotKeys)
