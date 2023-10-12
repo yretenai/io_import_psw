@@ -219,10 +219,11 @@ class ActorXWorld:
                 material_data = bpy.data.materials.new(landscape_data.name)
                 material_data.blend_method = 'HASHED'
                 material_data.use_nodes = True
+                bsdf = material_data.node_tree.nodes['Principled BSDF']
                 tex_coord = material_data.node_tree.nodes.new(type='ShaderNodeTexCoord')
-                tex_coord.location = material_data.node_tree.nodes['Principled BSDF'].location + Vector((-1200, 0))
+                tex_coord.location = bsdf.location + Vector((-1200, 0))
                 invert_color: ShaderNodeInvert = material_data.node_tree.nodes.new(type='ShaderNodeInvert')
-                invert_color.location = material_data.node_tree.nodes['Principled BSDF'].location + Vector((-300, 0))
+                invert_color.location = bsdf.location + Vector((-300, 0))
                 material_data.node_tree.links.new(invert_color.outputs['Color'], bsdf.inputs['Alpha'])
 
             landscape_data.materials.append(material_data)

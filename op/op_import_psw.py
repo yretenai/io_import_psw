@@ -1,4 +1,7 @@
 from typing import Union, Set
+from pathlib import Path
+from glob import glob
+from os.path import sep
 
 import bpy
 from bpy.props import CollectionProperty, FloatProperty, StringProperty
@@ -6,6 +9,18 @@ from bpy.types import Operator, Context, Property, OperatorFileListElement, TOPB
 from bpy_extras.io_utils import ImportHelper
 from io_import_pskx.blend.psw import ActorXWorld
 from io_import_pskx.blend import nodes
+
+
+def find_root_from_path(path: str):
+    current_path = Path(path).parent.absolute()
+    while True:
+        root_files = glob(str(current_path) + sep + "*.root")
+        if len(root_files) == 1:
+            print("Found root path %s" % str(current_path))
+            return str(current_path)
+        if current_path.parent == current_path:
+            return None
+        current_path = current_path.parent
 
 
 class op_import_psw(Operator, ImportHelper):
@@ -44,8 +59,10 @@ class op_import_psw(Operator, ImportHelper):
 
     def execute(self, context: Context) -> Union[Set[str], Set[int]]:
         if len(self.base_game_dir) == 0:
-            self.report({'ERROR'}, 'Did not select a game directory')
-            return {'CANCELLED'}
+            self.base_game_dir = find_root_from_path(self.filepath)
+            if self.base_game_dir is None:
+                self.report({'ERROR'}, 'Did not select a game directory')
+                return {'CANCELLED'}
 
         nodes.register()
 
