@@ -58,7 +58,8 @@ class ActorXWorld:
             if mesh_key in mesh_cache:
                 mesh_obj = mesh_cache[mesh_key]
             elif psk_path != 'None':
-                result_path = psk_path
+                result_path = psk_path.strip('/')
+
                 if not result_path.endswith('.psk'):
                     result_path += '.psk'
 
@@ -82,7 +83,7 @@ class ActorXWorld:
                     psk.execute(context)
                     mesh_cache[mesh_key] = mesh_obj
                 else:
-                    print('Can\'t find asset %s' % (psk_path))
+                    print('Can\'t find asset %s, tried looking for %s' % (psk_path, result_path))
                     mesh_obj = None
 
             instance = bpy.data.objects.new(name, None)
@@ -162,15 +163,16 @@ class ActorXWorld:
 
                 continue
 
+            actor = actor_cache[0 if actor_id == -1 else actor_id]
+
             if offset > Vector((0.0, 0.0, 0.0)):
-                # only handle 0, 0
-                continue
+                print('Landscape tile %s is off-center, please verify that it is accurate' % (actor.name, offset.x, offset.y, offset.z))
 
             base_scale = Vector((scale, scale, 255))
             adj_scale = base_scale * dim
             pos_offset = (adj_scale - base_scale) / 2
             pos_offset.y *= -1
-            adj_pos = pos + pos_offset
+            adj_pos = (pos + offset) + pos_offset
             global_offset = ((scale + 1) / 2) - 1
             adj_pos.x += global_offset
             adj_pos.y -= global_offset
@@ -178,8 +180,6 @@ class ActorXWorld:
 
             adj_scale *= self.resize_mod
             adj_pos *= self.resize_mod
-
-            actor = actor_cache[0 if actor_id == -1 else actor_id]
 
             landscape_data: Mesh = bpy.data.meshes.new(actor.name + '_Sector%d_%d' % (tile_x, tile_y))
             landscape_obj: Object = bpy.data.objects.new(name=landscape_data.name, object_data=landscape_data)
