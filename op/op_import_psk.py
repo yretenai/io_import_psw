@@ -8,7 +8,7 @@ from io_import_pskx.blend.psk import ActorXMesh
 
 
 class op_import_psk(Operator, ImportHelper):
-    bl_idname = 'import_animation.psk'
+    bl_idname = 'import_mesh.psk'
     bl_label = 'Import ActorX PSK'
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -49,17 +49,3 @@ class op_import_psk(Operator, ImportHelper):
             return ret
         else:
             return ActorXMesh(self.filepath, settings).execute(context)
-
-
-def register():
-    bpy.utils.register_class(op_import_psk)
-    TOPBAR_MT_file_import.append(operator)
-
-
-def unregister():
-    bpy.utils.unregister_class(op_import_psk)
-    TOPBAR_MT_file_import.remove(operator)
-
-
-def operator(self: Operator, context: Context):
-    self.layout.operator(op_import_psk.bl_idname, text='ActorX Mesh (.psk)')

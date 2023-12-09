@@ -67,7 +67,6 @@ class ActorXMesh:
         if self.psk.Normals is not None:
             mesh_data.polygons.foreach_set('use_smooth', numpy.full(self.psk.NumFaces, True))
             mesh_data.normals_split_custom_set_from_vertices(self.psk.Normals)
-            mesh_data.use_auto_smooth = True
 
         if self.psk.Colors is not None:
             color_layer: MeshLoopColorLayer = mesh_data.vertex_colors.new(name='Color', do_init=False)

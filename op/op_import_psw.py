@@ -80,17 +80,3 @@ class op_import_psw(Operator, ImportHelper):
             return ret
         else:
             return ActorXWorld(self.filepath, settings).execute(context)
-
-
-def register():
-    bpy.utils.register_class(op_import_psw)
-    TOPBAR_MT_file_import.append(operator)
-
-
-def unregister():
-    bpy.utils.unregister_class(op_import_psw)
-    TOPBAR_MT_file_import.remove(operator)
-
-
-def operator(self: Operator, context: Context):
-    self.layout.operator(op_import_psw.bl_idname, text='ActorX World (.psw)')
