@@ -76,7 +76,7 @@ class ActorXWorld:
                     result_path = result_path.replace('/', sep)
 
                 result_path = normpath(join_path(self.game_dir, result_path))
-                uemodel_path = splitext(result_path) + '.uemodel'
+                uemodel_path = splitext(result_path)[0] + '.uemodel'
 
                 if not exists(result_path):  # try getting pskx instead of psk
                     result_path += 'x'
@@ -93,11 +93,11 @@ class ActorXWorld:
                     mesh_cache[mesh_key] = mesh_obj
                 elif enable_ueformat and exists(uemodel_path):
                     print("[psw] importing model %s" % (uemodel_path))
-                    import_settings = UEModelOptions(link=False, scale_factor=0.01, bone_length=5, reorient_bones=False)
+                    import_settings = UEModelOptions(link=False, scale_factor=self.resize_mod, bone_length=5, reorient_bones=False)
                     uemodel_obj = UEFormatImport(import_settings).import_file(uemodel_path)
                     mesh_obj = bpy.data.collections.new(uemodel_obj.name)
                     actor_collection.children.link(mesh_obj)
-                    actor_layer.children[-1].link(uemodel_obj)
+                    mesh_obj.objects.link(uemodel_obj)
                     mesh_cache[mesh_key] = mesh_obj
                 else:
                     print('[psw] Can\'t find asset %s, tried looking for %s' % (psk_path, result_path))

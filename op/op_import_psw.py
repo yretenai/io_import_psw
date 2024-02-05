@@ -59,8 +59,8 @@ class op_import_psw(Operator, ImportHelper):
 
     def execute(self, context: Context) -> Union[Set[str], Set[int]]:
         if len(self.base_game_dir) == 0:
-            self.base_game_dir = find_root_from_path(self.filepath)
-            if self.base_game_dir is None:
+            self.base_game_dir = find_root_from_path(self.filepath) or ''
+            if len(self.base_game_dir) == 0:
                 self.report({'ERROR'}, 'Did not select a game directory')
                 return {'CANCELLED'}
 
