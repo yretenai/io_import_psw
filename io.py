@@ -372,7 +372,6 @@ class AnimationV2:
 
         self.SequenceName = fix_string_np(self.NPSequences[0]['name'])
         self.Additive = bool(self.NPSequences[0]['additive'])
-        print('Additive = %d' % (self.Additive))
 
         self.PosKeys = [None] * self.NumBones
         self.SclKeys = [None] * self.NumBones
@@ -451,14 +450,13 @@ class World:
 def read_chunk(stream: typing.BinaryIO) -> tuple[ndarray | None, str]:
     (chunk_id, chunk_type, chunk_size, chunk_count) = unpack('20s3i', stream.read(32))
     chunk_id = fix_string(chunk_id)
-    # print('Reading %d elements for chunk %s' % (chunk_count, chunk_id))
     total_size = chunk_size * chunk_count
 
     for chunk_key in dispatch.keys():
         if chunk_key == chunk_id or chunk_id.startswith(chunk_key):
             return (numpy.fromfile(stream, dtype=dispatch[chunk_key], count=chunk_count), chunk_id)
 
-    print('No parser found for %s!' % (chunk_id))
+    print('[pskx] No parser found for %s!' % (chunk_id))
 
     stream.seek(total_size, 1)
 
@@ -478,7 +476,6 @@ def read_actorx(stream: typing.BinaryIO, settings: dict[str, Property]) -> Anima
         ob = World()
     else:
         return None
-    # print('Reading %s' % magic)
     stream.seek(0, 2)
     size = stream.tell()
     stream.seek(32, 0)

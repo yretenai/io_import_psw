@@ -8,6 +8,15 @@ from mathutils import Vector
 from io_import_pskx.io import read_actorx, World, DataType
 from io_import_pskx.blend.psk import ActorXMesh
 
+enable_ueformat = False
+try:
+    print("[psw] trying to load ue_format for uemodel support")
+    from ue_format import UEFormatImport, UEModelOptions
+    enable_ueformat = True
+    print("[psw] successfully loaded ue_format")
+except: 
+    print("[psw] failed to load ue_format")
+    pass
 
 class ActorXWorld:
     path: str
@@ -67,23 +76,31 @@ class ActorXWorld:
                     result_path = result_path.replace('/', sep)
 
                 result_path = normpath(join_path(self.game_dir, result_path))
+                uemodel_path = splitext(result_path) + '.uemodel'
 
                 if not exists(result_path):  # try getting pskx instead of psk
                     result_path += 'x'
 
                 if exists(result_path):
+                    print("[psw] importing model %s" % (result_path))
                     import_settings = self.settings.copy()
                     import_settings['override_materials'] = self.psw.OverrideMaterials[actor_id]
                     psk = ActorXMesh(result_path, import_settings)
-
                     mesh_obj = bpy.data.collections.new(psk.name)
                     actor_collection.children.link(mesh_obj)
                     context.view_layer.active_layer_collection = actor_layer.children[-1]
-
                     psk.execute(context)
                     mesh_cache[mesh_key] = mesh_obj
+                elif enable_ueformat and exists(uemodel_path):
+                    print("[psw] importing model %s" % (uemodel_path))
+                    import_settings = UEModelOptions(link=False, scale_factor=0.01, bone_length=5, reorient_bones=False)
+                    uemodel_obj = UEFormatImport(import_settings).import_file(uemodel_path)
+                    mesh_obj = bpy.data.collections.new(uemodel_obj.name)
+                    actor_collection.children.link(mesh_obj)
+                    actor_layer.children[-1].link(uemodel_obj)
+                    mesh_cache[mesh_key] = mesh_obj
                 else:
-                    print('Can\'t find asset %s, tried looking for %s' % (psk_path, result_path))
+                    print('[psw] Can\'t find asset %s, tried looking for %s' % (psk_path, result_path))
                     mesh_obj = None
 
             instance = bpy.data.objects.new(name, None)
@@ -123,7 +140,7 @@ class ActorXWorld:
             result_path = normpath(join_path(self.game_dir, result_path))
 
             if not exists(result_path):
-                print('Can\'t find asset %s' % (tex_path))
+                print('[psw] Can\'t find asset %s' % (tex_path))
                 continue
 
             if type_id != 0:
@@ -166,7 +183,7 @@ class ActorXWorld:
             actor = actor_cache[0 if actor_id == -1 else actor_id]
 
             if offset > Vector((0.0, 0.0, 0.0)):
-                print('Landscape tile %s is off-center, please verify that it is accurate' % (actor.name, offset.x, offset.y, offset.z))
+                print('[psw] Landscape tile %s is off-center, please verify that it is accurate' % (actor.name, offset.x, offset.y, offset.z))
 
             base_scale = Vector((scale, scale, 255))
             adj_scale = base_scale * dim

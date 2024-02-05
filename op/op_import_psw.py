@@ -16,7 +16,7 @@ def find_root_from_path(path: str):
     while True:
         root_files = glob(str(current_path) + sep + "*.root")
         if len(root_files) == 1:
-            print("Found root path %s" % str(current_path))
+            print("[psw] Found root path %s" % str(current_path))
             return str(current_path)
         if current_path.parent == current_path:
             return None
