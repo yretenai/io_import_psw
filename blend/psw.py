@@ -1,10 +1,11 @@
 from os.path import basename, splitext, sep, normpath, exists
 from os.path import join as join_path
 
+import numpy
 import bpy.types
 import io_import_pskx.utils as utils
 from bpy.types import Property, Context, Collection, Mesh, Object, NodesModifier, GeometryNodeTree, NodeGroupOutput, GeometryNodeGroup, Image, Material, ShaderNodeTexCoord, ShaderNodeSeparateXYZ, NodeReroute, ShaderNodeTexImage
-from mathutils import Vector
+from mathutils import Quaternion, Vector, Color
 from io_import_pskx.io import read_actorx, World, DataType
 from io_import_pskx.blend.psk import ActorXMesh
 
@@ -17,6 +18,33 @@ try:
 except: 
     print("[psw] failed to load ue_format")
     pass
+
+
+def convert_temperature(temperature: float) -> Color:
+    print(temperature)
+    temperature = numpy.clip(temperature, 1000, 40000)
+    temperature = temperature / 100.0
+
+    if temperature <= 66:
+        red = 255
+    else:
+        red = 329.698727446 * (temperature - 60)**-0.1332047592
+
+    if temperature <= 66:
+        green = 99.4708025861 * numpy.log(temperature) - 161.1195681661
+    else:
+        green = 288.1221695283 * (temperature - 60)**-0.0755148492
+
+    if temperature >= 66:
+        blue = 255
+    elif temperature <= 19:
+        blue = 0
+    else:
+        blue = 138.5177312231 * numpy.log(temperature - 10) - 305.0447927307
+
+    rgb = numpy.clip((red, green, blue), 0, 255)
+    return Color((rgb[0] / 255, rgb[1] / 255, rgb[2] / 255))
+
 
 class ActorXWorld:
     path: str
@@ -31,6 +59,10 @@ class ActorXWorld:
         self.name = splitext(basename(path))[0]
         self.settings = settings
         self.resize_mod = self.settings['resize_by']
+        self.adjust_intensity = self.settings['adjust_intensity']
+        self.adjust_spot_intensity = self.settings['adjust_spot_intensity']
+        self.adjust_area_intensity = self.settings['adjust_area_intensity']
+        self.adjust_sun_intensity = self.settings['adjust_sun_intensity']
         self.game_dir = self.settings['base_game_dir']
 
         with open(self.path, 'rb') as stream:
@@ -54,13 +86,22 @@ class ActorXWorld:
         world_collection.children.link(actor_collection)
         actor_layer = world_layer.children[-1]
 
+        point_light_collection = bpy.data.collections.new(self.name + ' Point Lights')
+        sun_light_collection = bpy.data.collections.new(self.name + ' Sun Lights')
+        spot_light_collection = bpy.data.collections.new(self.name + ' Spot Lights')
+        area_light_collection = bpy.data.collections.new(self.name + ' Area Lights')
+        world_collection.children.link(point_light_collection)
+        world_collection.children.link(sun_light_collection)
+        world_collection.children.link(spot_light_collection)
+        world_collection.children.link(area_light_collection)
+
         old_active_layer = context.view_layer.active_layer_collection
 
         mesh_cache: dict[tuple[str, frozenset], Collection] = {}
 
         actor_cache: list[Collection] = [None] * self.psw.NumActors
 
-        for actor_id, (name, psk_path, parent, pos, rot, scale, no_shadow, hidden) in enumerate(self.psw.Actors):
+        for actor_id, (name, psk_path, parent, pos, rot, scale, no_shadow, hidden, _) in enumerate(self.psw.Actors):
             mesh_key = (psk_path, frozenset(self.psw.OverrideMaterials[actor_id].items()))
 
             mesh_obj = None
@@ -126,6 +167,56 @@ class ActorXWorld:
             actor_cache[actor_id] = instance
 
             world_collection.objects.link(instance)
+        
+        for (actor_id, color, light_type, whl, attenuation, radius, temp, bias, lumens, angle) in self.psw.Lights:
+            light_type_bl = 'POINT'
+            if light_type == 0:
+                if self.adjust_sun_intensity <= 0.0001:
+                    continue
+                light_type_bl = 'SUN'
+            elif light_type == 1:
+                if self.adjust_intensity <= 0.0001:
+                    continue
+            elif light_type == 2:
+                if self.adjust_spot_intensity <= 0.0001:
+                    continue
+                light_type_bl = 'SPOT'
+            elif light_type == 3:
+                if self.adjust_area_intensity <= 0.0001:
+                    continue
+                light_type_bl = 'AREA'
+            actor = actor_cache[actor_id]
+            actor_data = self.psw.Actors[actor_id]
+            bl_light_data = bpy.data.lights.new(name=actor.name + '_light', type=light_type_bl)
+            bl_light_data.use_shadow = not actor_data[6]
+            bl_light_data.color = color
+            if actor_data[8]:
+                bl_light_data.color = convert_temperature(temp)
+            bl_light_data.shadow_soft_size = bias
+            if light_type == 0:
+                bl_light_data.energy = lumens * self.adjust_sun_intensity
+            elif light_type == 1:
+                bl_light_data.energy = lumens * self.adjust_intensity
+            elif light_type == 2:
+                bl_light_data.energy = lumens * self.adjust_spot_intensity
+                bl_light_data.spot_size = angle
+            elif light_type == 3:
+                bl_light_data.energy = lumens * self.adjust_area_intensity
+                bl_light_data.shape = 'RECTANGLE'
+                bl_light_data.size = whl.x
+                bl_light_data.size_y = whl.y
+            bl_light_obj = bpy.data.objects.new(name=actor.name + '_light', object_data=bl_light_data)
+            bl_light_obj.parent = actor
+            bl_light_obj.rotation_mode = 'QUATERNION'
+            bl_light_obj.rotation_quaternion = Quaternion((0.707107, 0, -0.707107, 0))
+            if light_type == 0:
+                sun_light_collection.objects.link(bl_light_obj)
+            elif light_type == 1:
+                point_light_collection.objects.link(bl_light_obj)
+            elif light_type == 2:
+                spot_light_collection.objects.link(bl_light_obj)
+            elif light_type == 3:
+                area_light_collection.objects.link(bl_light_obj)
 
         tiles: map[tuple[int, int], tuple[Object, Material, ShaderNodeTexCoord, set[str]]] = {}
 

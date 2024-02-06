@@ -42,6 +42,34 @@ class op_import_psw(Operator, ImportHelper):
             soft_max=10.0
     )
 
+    adjust_intensity: FloatProperty(
+            name='Adjust Point Light Intensity By',
+            default=0.05,
+            min=0.0,
+            soft_max=10.0
+    )
+
+    adjust_area_intensity: FloatProperty(
+            name='Adjust Area Light Intensity By',
+            default=0.01,
+            min=0.0,
+            soft_max=10.0
+    )
+
+    adjust_spot_intensity: FloatProperty(
+            name='Adjust Spot Light Intensity By',
+            default=0.0025,
+            min=0.0,
+            soft_max=10.0
+    )
+
+    adjust_sun_intensity: FloatProperty(
+            name='Adjust Directional Light Intensity By',
+            default=0.001,
+            min=0.0,
+            soft_max=10.0
+    )
+
     base_game_dir: StringProperty(
             name='Game Assets Directory',
             default='',
@@ -55,6 +83,10 @@ class op_import_psw(Operator, ImportHelper):
         layout.use_property_decorate = True
 
         layout.prop(self, 'resize_by')
+        layout.prop(self, 'adjust_intensity')
+        layout.prop(self, 'adjust_area_intensity')
+        layout.prop(self, 'adjust_spot_intensity')
+        layout.prop(self, 'adjust_sun_intensity')
         layout.prop(self, 'base_game_dir')
 
     def execute(self, context: Context) -> Union[Set[str], Set[int]]:
