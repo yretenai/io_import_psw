@@ -4,7 +4,7 @@ from struct import unpack
 
 import numpy
 from bpy.types import Property
-from io_import_pskx.utils import fix_string_np, fix_string
+from io_import_pskx.utils import fix_string_np, fix_string, log_error
 from mathutils import Quaternion, Vector, Color
 from numpy import dtype, ndarray
 from numpy.typing import DTypeLike
@@ -470,7 +470,7 @@ def read_chunk(stream: typing.BinaryIO) -> tuple[ndarray | None, str]:
         if chunk_key == chunk_id or chunk_id.startswith(chunk_key):
             return (numpy.fromfile(stream, dtype=dispatch[chunk_key], count=chunk_count), chunk_id)
 
-    print('[pskx] No parser found for %s!' % (chunk_id))
+    log_error('ACTORX', 'No parser found for %s!' % (chunk_id))
 
     stream.seek(total_size, 1)
 

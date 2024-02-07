@@ -20,10 +20,11 @@ class op_import_psa(Operator, ImportHelper):
     )
 
     resize_by: FloatProperty(
-            name='Resize By',
+            name='Scale',
+            description='Resize By',
             default=0.01,
             min=0.01,
-            max=10.0
+            soft_max=10.0
     )
 
     def draw(self, context: Context):

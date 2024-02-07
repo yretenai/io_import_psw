@@ -8,20 +8,20 @@ from bpy.types import Property, Context, Collection, Mesh, Object, NodesModifier
 from mathutils import Quaternion, Vector, Color
 from io_import_pskx.io import read_actorx, World, DataType
 from io_import_pskx.blend.psk import ActorXMesh
+from io_import_pskx.utils import log_error, log_info
 
 enable_ueformat = False
 try:
-    print("[psw] trying to load ue_format for uemodel support")
+    log_info('WORLD', "trying to load ue_format for uemodel support")
     from ue_format import UEFormatImport, UEModelOptions
     enable_ueformat = True
-    print("[psw] successfully loaded ue_format")
+    log_info('WORLD', "successfully loaded ue_format")
 except: 
-    print("[psw] failed to load ue_format")
+    log_error('WORLD', "failed to load ue_format")
     pass
 
 
 def convert_temperature(temperature: float) -> Color:
-    print(temperature)
     temperature = numpy.clip(temperature, 1000, 40000)
     temperature = temperature / 100.0
 
@@ -63,6 +63,7 @@ class ActorXWorld:
         self.adjust_spot_intensity = self.settings['adjust_spot_intensity']
         self.adjust_area_intensity = self.settings['adjust_area_intensity']
         self.adjust_sun_intensity = self.settings['adjust_sun_intensity']
+        self.skip_offcenter = self.settings['skip_offcenter']
         self.game_dir = self.settings['base_game_dir']
 
         with open(self.path, 'rb') as stream:
@@ -108,7 +109,7 @@ class ActorXWorld:
             if mesh_key in mesh_cache:
                 mesh_obj = mesh_cache[mesh_key]
             elif psk_path != 'None':
-                result_path = psk_path.strip('/')
+                result_path = psk_path.strip('/').strip('\\')
 
                 if not result_path.endswith('.psk'):
                     result_path += '.psk'
@@ -123,7 +124,7 @@ class ActorXWorld:
                     result_path += 'x'
 
                 if exists(result_path):
-                    print("[psw] importing model %s" % (result_path))
+                    log_info('WORLD', "importing model %s" % (result_path))
                     import_settings = self.settings.copy()
                     import_settings['override_materials'] = self.psw.OverrideMaterials[actor_id]
                     psk = ActorXMesh(result_path, import_settings)
@@ -133,7 +134,7 @@ class ActorXWorld:
                     psk.execute(context)
                     mesh_cache[mesh_key] = mesh_obj
                 elif enable_ueformat and exists(uemodel_path):
-                    print("[psw] importing model %s" % (uemodel_path))
+                    log_info('WORLD', "importing model %s" % (uemodel_path))
                     import_settings = UEModelOptions(link=False, scale_factor=self.resize_mod, bone_length=5, reorient_bones=False)
                     uemodel_obj = UEFormatImport(import_settings).import_file(uemodel_path)
                     mesh_obj = bpy.data.collections.new(uemodel_obj.name)
@@ -141,7 +142,7 @@ class ActorXWorld:
                     mesh_obj.objects.link(uemodel_obj)
                     mesh_cache[mesh_key] = mesh_obj
                 else:
-                    print('[psw] Can\'t find asset %s, tried looking for %s' % (psk_path, result_path))
+                    log_error('WORLD', 'Can\'t find asset %s, tried looking for %s' % (psk_path, result_path))
                     mesh_obj = None
 
             instance = bpy.data.objects.new(name, None)
@@ -223,7 +224,10 @@ class ActorXWorld:
         # landscape_hosts: set[Object] = set()
 
         for (tex_path, actor_id, pos, scale, type_id, tile_x, tile_y, bias, offset, dim) in self.psw.Landscapes:
-            result_path = tex_path
+            if offset > Vector((0.0, 0.0, 0.0)) and self.skip_offcenter:
+                continue
+
+            result_path = tex_path.strip('/').strip('\\')
             if not result_path.endswith('.png'):
                 result_path += '.png'
             if sep != '/':
@@ -231,7 +235,7 @@ class ActorXWorld:
             result_path = normpath(join_path(self.game_dir, result_path))
 
             if not exists(result_path):
-                print('[psw] Can\'t find asset %s' % (tex_path))
+                log_error('WORLD', 'Can\'t find asset %s' % (tex_path))
                 continue
 
             if type_id != 0:
@@ -273,9 +277,6 @@ class ActorXWorld:
 
             actor = actor_cache[0 if actor_id == -1 else actor_id]
 
-            if offset > Vector((0.0, 0.0, 0.0)):
-                print('[psw] Landscape tile %s is off-center, please verify that it is accurate' % (actor.name, offset.x, offset.y, offset.z))
-
             base_scale = Vector((scale, scale, 255))
             adj_scale = base_scale * dim
             pos_offset = (adj_scale - base_scale) / 2
@@ -300,7 +301,7 @@ class ActorXWorld:
             if hasattr(landscape_nodes, 'outputs'):
                 landscape_nodes.outputs.new('NodeSocketGeometry')
             elif hasattr(landscape_nodes, 'interface'):
-                landscape_nodes.interface.new_socket('Geometry', in_out={'OUTPUT'}, socket_type='NodeSocketGeometry')
+                landscape_nodes.interface.new_socket('Geometry', in_out='OUTPUT', socket_type='NodeSocketGeometry')
             output_node: NodeGroupOutput = landscape_nodes.nodes.new(type='NodeGroupOutput')
             output_node.location = (400, 0)
             output_node.is_active_output = True

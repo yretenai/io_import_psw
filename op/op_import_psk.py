@@ -20,7 +20,8 @@ class op_import_psk(Operator, ImportHelper):
     )
 
     resize_by: FloatProperty(
-            name='Resize By',
+            name='Scale',
+            description='Resize By',
             default=0.01,
             min=0.01,
             soft_max=10.0
