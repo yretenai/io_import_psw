@@ -8,7 +8,7 @@ from bpy.types import Property, Context, Collection, Mesh, Object, NodesModifier
 from mathutils import Quaternion, Vector, Color
 from io_import_pskx.io import read_actorx, World, DataType
 from io_import_pskx.blend.psk import ActorXMesh
-from io_import_pskx.utils import log_error, log_info
+from io_import_pskx.utils import log_error, log_warning, log_info
 
 enable_ueformat = False
 try:
@@ -50,6 +50,13 @@ class ActorXWorld:
     path: str
     settings: dict[str, Property]
     resize_mod: float
+    adjust_intensity: float
+    adjust_spot_intensity: float
+    adjust_area_intensity: float
+    adjust_sun_intensity: float
+    skip_offcenter: bool
+    no_static_instances: bool
+    no_skeletons: bool
     game_dir: str
     psw: World | None
     name: str
@@ -64,6 +71,8 @@ class ActorXWorld:
         self.adjust_area_intensity = self.settings['adjust_area_intensity']
         self.adjust_sun_intensity = self.settings['adjust_sun_intensity']
         self.skip_offcenter = self.settings['skip_offcenter']
+        self.no_static_instances = self.settings['no_static_instances']
+        self.no_skeletons = self.settings['no_skeletons']
         self.game_dir = self.settings['base_game_dir']
 
         with open(self.path, 'rb') as stream:
@@ -81,9 +90,6 @@ class ActorXWorld:
         world_layer = context.view_layer.active_layer_collection.children[-1]
 
         actor_collection = bpy.data.collections.new(self.name + ' Actors')
-        actor_collection.hide_render = True
-        actor_collection.hide_select = True
-        actor_collection.hide_viewport = True
         world_collection.children.link(actor_collection)
         actor_layer = world_layer.children[-1]
 
@@ -95,6 +101,10 @@ class ActorXWorld:
         world_collection.children.link(sun_light_collection)
         world_collection.children.link(spot_light_collection)
         world_collection.children.link(area_light_collection)
+        
+        instance_collection = bpy.data.collections.new(self.name + ' Actor Instances')
+        world_collection.children.link(instance_collection)
+        instance_layer = world_layer.children[-1]
 
         old_active_layer = context.view_layer.active_layer_collection
 
@@ -102,58 +112,70 @@ class ActorXWorld:
 
         actor_cache: list[Collection] = [None] * self.psw.NumActors
 
-        for actor_id, (name, psk_path, parent, pos, rot, scale, no_shadow, hidden, _) in enumerate(self.psw.Actors):
-            mesh_key = (psk_path, frozenset(self.psw.OverrideMaterials[actor_id].items()))
+        for actor_id, (name, game_path, parent, pos, rot, scale, no_shadow, hidden, _, is_static) in enumerate(self.psw.Actors):
+            mesh_key = (game_path, frozenset(self.psw.OverrideMaterials[actor_id].items()))
 
+            if self.no_skeletons and not is_static:
+                continue
+            
+            if self.no_static_instances:
+                is_static = False
+            
             mesh_obj = None
-            if mesh_key in mesh_cache:
+            if mesh_key in mesh_cache and is_static:
                 mesh_obj = mesh_cache[mesh_key]
-            elif psk_path != 'None':
-                result_path = psk_path.strip('/').strip('\\')
-
-                if not result_path.endswith('.psk'):
-                    result_path += '.psk'
+            elif game_path != 'None':
+                result_path = game_path.strip('/').strip('\\')
 
                 if sep != '/':
                     result_path = result_path.replace('/', sep)
-
-                result_path = normpath(join_path(self.game_dir, result_path))
-                uemodel_path = splitext(result_path)[0] + '.uemodel'
-
-                if not exists(result_path):  # try getting pskx instead of psk
-                    result_path += 'x'
-
-                if exists(result_path):
-                    log_info('WORLD', "importing model %s" % (result_path))
-                    import_settings = self.settings.copy()
-                    import_settings['override_materials'] = self.psw.OverrideMaterials[actor_id]
-                    psk = ActorXMesh(result_path, import_settings)
-                    mesh_obj = bpy.data.collections.new(psk.name)
-                    actor_collection.children.link(mesh_obj)
-                    context.view_layer.active_layer_collection = actor_layer.children[-1]
-                    psk.execute(context)
-                    mesh_cache[mesh_key] = mesh_obj
-                elif enable_ueformat and exists(uemodel_path):
-                    log_info('WORLD', "importing model %s" % (uemodel_path))
-                    import_settings = UEModelOptions(link=False, scale_factor=self.resize_mod, bone_length=5, reorient_bones=False)
-                    uemodel_obj = UEFormatImport(import_settings).import_file(uemodel_path)
-                    mesh_obj = bpy.data.collections.new(uemodel_obj.name)
-                    actor_collection.children.link(mesh_obj)
-                    mesh_obj.objects.link(uemodel_obj)
-                    mesh_cache[mesh_key] = mesh_obj
+                
+                if enable_ueformat:
+                    uemodel_path = normpath(join_path(self.game_dir, result_path + '.uemodel'))
+                    if exists(uemodel_path):
+                        import_settings = UEModelOptions(link=True, scale_factor=self.resize_mod, bone_length=5, reorient_bones=False)
+                        if is_static:
+                            mesh_obj = bpy.data.collections.new(name)
+                            actor_collection.children.link(mesh_obj)
+                            context.view_layer.active_layer_collection = actor_layer.children[-1]
+                            uemodel_obj = UEFormatImport(import_settings).import_file(uemodel_path)
+                            mesh_obj.name = uemodel_obj.name
+                            mesh_cache[mesh_key] = mesh_obj
+                        else:
+                            context.view_layer.active_layer_collection = instance_layer
+                            mesh_obj = UEFormatImport(import_settings).import_file(uemodel_path)
                 else:
-                    log_error('WORLD', 'Can\'t find asset %s, tried looking for %s' % (psk_path, result_path))
-                    mesh_obj = None
+                    psk_path = normpath(join_path(self.game_dir, result_path + '.psk'))
+                    if not exists(psk_path):  # try getting pskx instead of psk
+                        psk_path += 'x'
 
-            instance = bpy.data.objects.new(name, None)
+                    if is_static and exists(psk_path):
+                        log_info('WORLD', "importing model %s" % (psk_path))
+                        import_settings = self.settings.copy()
+                        import_settings['override_materials'] = self.psw.OverrideMaterials[actor_id]
+                        psk = ActorXMesh(psk_path, import_settings)
+                        mesh_obj = bpy.data.collections.new(psk.name)
+                        actor_collection.children.link(mesh_obj)
+                        context.view_layer.active_layer_collection = actor_layer.children[-1]
+                        psk.execute(context)
+                        mesh_cache[mesh_key] = mesh_obj
+                    else:
+                        log_error('WORLD', 'Can\'t find asset %s' % result_path)
+                        mesh_obj = None
+
+            if is_static or mesh_obj is None:
+                instance = bpy.data.objects.new(name, None)
+
+                if mesh_obj is not None:
+                    instance.instance_type = 'COLLECTION'
+                    instance.instance_collection = mesh_obj
+            else:
+                instance = mesh_obj
+
             instance.location = pos
             instance.rotation_mode = 'QUATERNION'
             instance.rotation_quaternion = rot
             instance.scale = scale
-
-            if mesh_obj is not None:
-                instance.instance_type = 'COLLECTION'
-                instance.instance_collection = mesh_obj
 
             if no_shadow:
                 instance.visible_shadow = False
@@ -167,8 +189,12 @@ class ActorXWorld:
 
             actor_cache[actor_id] = instance
 
-            world_collection.objects.link(instance)
+            if is_static:
+                instance_collection.objects.link(instance)
         
+        actor_collection.hide_render = True
+        actor_collection.hide_viewport = True
+
         for (actor_id, color, light_type, whl, attenuation, radius, temp, bias, lumens, angle) in self.psw.Lights:
             light_type_bl = 'POINT'
             if light_type == 0:
@@ -221,12 +247,7 @@ class ActorXWorld:
 
         tiles: map[tuple[int, int], tuple[Object, Material, ShaderNodeTexCoord, set[str]]] = {}
 
-        # landscape_hosts: set[Object] = set()
-
         for (tex_path, actor_id, pos, scale, type_id, tile_x, tile_y, bias, offset, dim) in self.psw.Landscapes:
-            if offset > Vector((0.0, 0.0, 0.0)) and self.skip_offcenter:
-                continue
-
             result_path = tex_path.strip('/').strip('\\')
             if not result_path.endswith('.png'):
                 result_path += '.png'
@@ -276,6 +297,13 @@ class ActorXWorld:
                 continue
 
             actor = actor_cache[0 if actor_id == -1 else actor_id]
+            landscape_name = actor.name + '_Sector%d_%d' % (tile_x, tile_y)
+
+            if offset > Vector((0.0, 0.0, 0.0)):
+                log_warning('WORLD', 'Off-center landscape: %s (%f, %f, %f)' % (landscape_name, offset.x, offset.y, offset.z))
+
+                if self.skip_offcenter:
+                    continue
 
             base_scale = Vector((scale, scale, 255))
             adj_scale = base_scale * dim
@@ -290,12 +318,11 @@ class ActorXWorld:
             adj_scale *= self.resize_mod
             adj_pos *= self.resize_mod
 
-            landscape_data: Mesh = bpy.data.meshes.new(actor.name + '_Sector%d_%d' % (tile_x, tile_y))
+            landscape_data: Mesh = bpy.data.meshes.new(landscape_name)
             landscape_obj: Object = bpy.data.objects.new(name=landscape_data.name, object_data=landscape_data)
             landscape_obj.parent = actor
             landscape_obj.scale = adj_scale
             landscape_obj.location = adj_pos
-            # landscape_hosts.add(parent)
 
             landscape_nodes: GeometryNodeTree = bpy.data.node_groups.new(landscape_obj.name, 'GeometryNodeTree')
             if hasattr(landscape_nodes, 'outputs'):
@@ -340,12 +367,6 @@ class ActorXWorld:
             landscape_obj.material_slots[0].material = material_data
 
             tiles[(tile_x, tile_y)] = (landscape_obj, material_data, tex_coord, set())
-
-        # for landscape_host in landscape_hosts:
-        #     landscape_host.asset_mark()
-        #     landscape_host.asset_data.tags.new(name='actorx', skip_if_exists=True)
-        #     landscape_host.asset_data.tags.new(name='landscape', skip_if_exists=True)
-        #     landscape_host.asset_generate_preview()
 
         context.view_layer.active_layer_collection = old_active_layer
 

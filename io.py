@@ -407,7 +407,7 @@ class World:
 
     NumActors: int
 
-    Actors: list[tuple[str, str, int, Vector, Quaternion, Vector, bool, bool, bool]]  # bools = no shadow, hidden, use_temp
+    Actors: list[tuple[str, str, int, Vector, Quaternion, Vector, bool, bool, bool, bool]]  # bools = no shadow, hidden, use_temp, is_static
     Lights: list[tuple[int, Color, int, Vector, float, float, float, float, float, float]]
     OverrideMaterials: list[dict[int, str]]
     Landscapes: list[tuple[str, int, Vector, int, int, int, int, float, Vector, Vector]]  # name, actor, pos, size, type, x, y, bias, offset, dim
@@ -447,7 +447,14 @@ class World:
 
         if self.NPActors is not None and len(self.NPActors) > 0:
             self.NumActors = len(self.NPActors)
-            self.Actors = [(fix_string_np(x[0]), fix_string_np(x[1]), int(x[2]), Vector(x[3]) * resize_by, Quaternion((x[4][3], x[4][0], x[4][1], x[4][2])), Vector(x[5]), x[6] & 1 == 1, x[6] & 2 == 2, x[6] & 4 == 4) for x in self.NPActors]
+            """
+            x[6] = 
+                1 = NoShadow
+                2 = Hidden
+                4 = UseTemperature
+                8 = IsSkeleton 
+            """
+            self.Actors = [(fix_string_np(x[0]), fix_string_np(x[1]), int(x[2]), Vector(x[3]) * resize_by, Quaternion((x[4][3], x[4][0], x[4][1], x[4][2])), Vector(x[5]), x[6] & 1 == 1, x[6] & 2 == 2, x[6] & 4 == 4, x[6] & 8 == 0) for x in self.NPActors]
         
             if self.NPLights is not None and len(self.NPLights) > 0:
                 self.Lights = [(x['parent'], Color((x['color'][0] / 255, x['color'][1] / 255, x['color'][2] / 255)), int(x['type']), Vector(x['whl']) * resize_by, x['attenuation'], x['radius'], x['temp'], x['bias'], x['lumens'], x['angle']) for x in self.NPLights]

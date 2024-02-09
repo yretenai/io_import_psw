@@ -2,6 +2,7 @@ from typing import Union, Set
 from pathlib import Path
 from glob import glob
 from os.path import sep
+import os.path
 
 import bpy
 from bpy.props import CollectionProperty, FloatProperty, StringProperty, BoolProperty
@@ -85,6 +86,18 @@ class op_import_psw(Operator, ImportHelper):
             default=True
     )
 
+    no_static_instances: BoolProperty(
+            name='No Instancing',
+            description='Makes every instance a unique object\nWARNING: May significantly increase load times and memory usage.',
+            default=False
+    )
+
+    no_skeletons: BoolProperty(
+            name='No Skeletons',
+            description='Skip actors with skeletons\nWARNING: May significantly increase load times and memory usage.',
+            default=True
+    )
+
     base_game_dir: StringProperty(
             name='Asset Directory',
             description='If empty will try to walk directories to find it',
@@ -104,6 +117,8 @@ class op_import_psw(Operator, ImportHelper):
         layout.prop(self, 'adjust_spot_intensity')
         layout.prop(self, 'adjust_sun_intensity')
         layout.prop(self, 'skip_offcenter')
+        layout.prop(self, 'no_static_instances')
+        layout.prop(self, 'no_skeletons')
         layout.prop(self, 'base_game_dir')
 
     def execute(self, context: Context) -> Union[Set[str], Set[int]]:

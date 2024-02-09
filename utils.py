@@ -13,6 +13,7 @@ def fix_string_np(string: ndarray) -> str:
 
 INFO = u"\u001b[35m"
 ERROR = u"\u001b[31m"
+WARNING = u"\u001b[33m"
 RESET = u"\u001b[0m"
 
 def log_info(category: str, message: str):
@@ -21,3 +22,6 @@ def log_info(category: str, message: str):
 
 def log_error(category: str, message: str):
     print(f'{ERROR}[{category}]{RESET} {message}')
+
+def log_warning(category: str, message: str):
+    print(f'{WARNING}[{category}]{RESET} {message}')
