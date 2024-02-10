@@ -88,13 +88,19 @@ class op_import_psw(Operator, ImportHelper):
 
     no_static_instances: BoolProperty(
             name='No Instancing',
-            description='Makes every instance a unique object\nWARNING: May significantly increase load times and memory usage.',
+            description='Makes every instance a unique object\nWARNING: May significantly increase load times and memory usage when enabled.',
             default=False
     )
 
     no_skeletons: BoolProperty(
             name='No Skeletons',
-            description='Skip actors with skeletons\nWARNING: May significantly increase load times and memory usage.',
+            description='Skip actors with skeletons\nWARNING: May significantly increase load times and memory usage when disabled.',
+            default=True
+    )
+
+    use_actor_name: BoolProperty(
+            name='Use Actor Names',
+            description='If disabled, will use the mesh name instead of the actor name.',
             default=True
     )
 
@@ -119,6 +125,7 @@ class op_import_psw(Operator, ImportHelper):
         layout.prop(self, 'skip_offcenter')
         layout.prop(self, 'no_static_instances')
         layout.prop(self, 'no_skeletons')
+        layout.prop(self, 'use_actor_name')
         layout.prop(self, 'base_game_dir')
 
     def execute(self, context: Context) -> Union[Set[str], Set[int]]:

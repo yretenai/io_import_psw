@@ -46,6 +46,13 @@ def convert_temperature(temperature: float) -> Color:
     return Color((rgb[0] / 255, rgb[1] / 255, rgb[2] / 255))
 
 
+def undeduplicate_name(name: str) -> str:
+    if len(name) < 4:
+        return name
+    if name[-4] == '.':
+        return name[:-4]
+    return name
+
 class ActorXWorld:
     path: str
     settings: dict[str, Property]
@@ -73,6 +80,7 @@ class ActorXWorld:
         self.skip_offcenter = self.settings['skip_offcenter']
         self.no_static_instances = self.settings['no_static_instances']
         self.no_skeletons = self.settings['no_skeletons']
+        self.use_actor_name = self.settings['use_actor_name']
         self.game_dir = self.settings['base_game_dir']
 
         with open(self.path, 'rb') as stream:
@@ -139,7 +147,7 @@ class ActorXWorld:
                             actor_collection.children.link(mesh_obj)
                             context.view_layer.active_layer_collection = actor_layer.children[-1]
                             uemodel_obj = UEFormatImport(import_settings).import_file(uemodel_path)
-                            mesh_obj.name = uemodel_obj.name
+                            mesh_obj.name = undeduplicate_name(uemodel_obj.name)
                             mesh_cache[mesh_key] = mesh_obj
                         else:
                             context.view_layer.active_layer_collection = instance_layer
@@ -162,9 +170,17 @@ class ActorXWorld:
                     else:
                         log_error('WORLD', 'Can\'t find asset %s' % result_path)
                         mesh_obj = None
+            
+            instance_name = name
+
+            if mesh_obj is not None:
+                if not self.use_actor_name or instance_name.startswith('StaticMeshActor') or instance_name.startswith('SkeletalMeshActor'):
+                    instance_name = undeduplicate_name(mesh_obj.name)
+                else:
+                    instance_name = '%s %s' % (name, undeduplicate_name(mesh_obj.name))
 
             if is_static or mesh_obj is None:
-                instance = bpy.data.objects.new(name, None)
+                instance = bpy.data.objects.new(instance_name, None)
 
                 if mesh_obj is not None:
                     instance.instance_type = 'COLLECTION'
