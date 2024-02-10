@@ -70,7 +70,8 @@ class ActorXWorld:
 
     def __init__(self, path: str, settings: dict[str, Property]):
         self.path = path
-        self.name = splitext(basename(path))[0]
+        self.name = basename(path)
+        if '.' in self.name: self.name = self.name[:self.name.index('.')]
         self.settings = settings
         self.resize_mod = self.settings['resize_by']
         self.adjust_intensity = self.settings['adjust_intensity']
@@ -98,21 +99,26 @@ class ActorXWorld:
         world_layer = context.view_layer.active_layer_collection.children[-1]
 
         actor_collection = bpy.data.collections.new(self.name + ' Actors')
-        world_collection.children.link(actor_collection)
-        actor_layer = world_layer.children[-1]
-
+        instance_collection = bpy.data.collections.new(self.name + ' Actor Instances')
+        landscape_collection = bpy.data.collections.new(self.name + ' Landscape')
         point_light_collection = bpy.data.collections.new(self.name + ' Point Lights')
         sun_light_collection = bpy.data.collections.new(self.name + ' Sun Lights')
         spot_light_collection = bpy.data.collections.new(self.name + ' Spot Lights')
         area_light_collection = bpy.data.collections.new(self.name + ' Area Lights')
+
+        world_collection.children.link(actor_collection)
+        actor_layer = world_layer.children[-1]
+        
+        world_collection.children.link(instance_collection)
+        instance_layer = world_layer.children[-1]
+        
+        world_collection.children.link(landscape_collection)
+        landscape_layer = world_layer.children[-1]
+
         world_collection.children.link(point_light_collection)
         world_collection.children.link(sun_light_collection)
         world_collection.children.link(spot_light_collection)
         world_collection.children.link(area_light_collection)
-        
-        instance_collection = bpy.data.collections.new(self.name + ' Actor Instances')
-        world_collection.children.link(instance_collection)
-        instance_layer = world_layer.children[-1]
 
         old_active_layer = context.view_layer.active_layer_collection
 
@@ -363,7 +369,7 @@ class ActorXWorld:
                 bpy.data.node_groups.remove(node_modifier.node_group)
             node_modifier.node_group = landscape_nodes
 
-            world_collection.objects.link(landscape_obj)
+            landscape_collection.objects.link(landscape_obj)
 
             material_data: Material = bpy.data.materials.get(landscape_data.name)
 
@@ -385,5 +391,19 @@ class ActorXWorld:
             tiles[(tile_x, tile_y)] = (landscape_obj, material_data, tex_coord, set())
 
         context.view_layer.active_layer_collection = old_active_layer
+
+        collections = [
+            actor_collection,
+            instance_collection,
+            landscape_collection,
+            point_light_collection,
+            sun_light_collection,
+            spot_light_collection,
+            area_light_collection
+        ]
+
+        for collection in collections:
+            if len(collection.all_objects) == 0:
+                world_collection.children.unlink(collection)
 
         return {'FINISHED'}

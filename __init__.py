@@ -4,7 +4,7 @@ from typing import Any
 bl_info = {
         'name':        'Import ActorX Mesh/Animations (.psk, .psa)',
         'author':      'yretenai',
-        'version':     (1, 0, 0),
+        'version':     (1, 2, 0),
         'blender':     (4, 0, 0),
         'location':    'File > Import > PSK',
         'description': 'Import ActorX mesh or animation files',
