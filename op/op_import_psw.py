@@ -86,6 +86,24 @@ class op_import_psw(Operator, ImportHelper):
             default=True
     )
 
+    import_mesh: BoolProperty(
+            name='Import Meshes',
+            description='When disabled, will prevent meshes from being imported',
+            default=True
+    )
+
+    import_landscape: BoolProperty(
+            name='Import Landscapes',
+            description='When disabled, will prevent landscapes from being imported',
+            default=True
+    )
+
+    import_light: BoolProperty(
+            name='Import Lights',
+            description='When disabled, will prevent lights from being imported',
+            default=True
+    )
+
     no_static_instances: BoolProperty(
             name='No Instancing',
             description='Makes every instance a unique object\nWARNING: May significantly increase load times and memory usage when enabled.',
@@ -117,6 +135,9 @@ class op_import_psw(Operator, ImportHelper):
         layout.use_property_split = True
         layout.use_property_decorate = True
 
+        layout.prop(self, 'import_mesh')
+        layout.prop(self, 'import_landscape')
+        layout.prop(self, 'import_light')
         layout.prop(self, 'resize_by')
         layout.prop(self, 'adjust_intensity')
         layout.prop(self, 'adjust_area_intensity')

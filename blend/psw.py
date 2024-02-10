@@ -83,6 +83,9 @@ class ActorXWorld:
         self.no_skeletons = self.settings['no_skeletons']
         self.use_actor_name = self.settings['use_actor_name']
         self.game_dir = self.settings['base_game_dir']
+        self.import_mesh = self.settings['import_mesh']
+        self.import_landscape = self.settings['import_landscape']
+        self.import_light = self.settings['import_light']
 
         with open(self.path, 'rb') as stream:
             self.psw = read_actorx(stream, settings)
@@ -138,7 +141,7 @@ class ActorXWorld:
             mesh_obj = None
             if mesh_key in mesh_cache and is_static:
                 mesh_obj = mesh_cache[mesh_key]
-            elif game_path != 'None':
+            elif game_path != 'None' and self.import_mesh:
                 result_path = game_path.strip('/').strip('\\')
 
                 if sep != '/':
@@ -217,178 +220,179 @@ class ActorXWorld:
         actor_collection.hide_render = True
         actor_collection.hide_viewport = True
 
-        for (actor_id, color, light_type, whl, attenuation, radius, temp, bias, lumens, angle) in self.psw.Lights:
-            light_type_bl = 'POINT'
-            if light_type == 0:
-                if self.adjust_sun_intensity <= 0.0001:
-                    continue
-                light_type_bl = 'SUN'
-            elif light_type == 1:
-                if self.adjust_intensity <= 0.0001:
-                    continue
-            elif light_type == 2:
-                if self.adjust_spot_intensity <= 0.0001:
-                    continue
-                light_type_bl = 'SPOT'
-            elif light_type == 3:
-                if self.adjust_area_intensity <= 0.0001:
-                    continue
-                light_type_bl = 'AREA'
-            actor = actor_cache[actor_id]
-            actor_data = self.psw.Actors[actor_id]
-            bl_light_data = bpy.data.lights.new(name=actor.name + '_light', type=light_type_bl)
-            bl_light_data.use_shadow = not actor_data[6]
-            bl_light_data.color = color
-            if actor_data[8]:
-                bl_light_data.color = convert_temperature(temp)
-            bl_light_data.shadow_soft_size = bias
-            if light_type == 0:
-                bl_light_data.energy = lumens * self.adjust_sun_intensity
-            elif light_type == 1:
-                bl_light_data.energy = lumens * self.adjust_intensity
-            elif light_type == 2:
-                bl_light_data.energy = lumens * self.adjust_spot_intensity
-                bl_light_data.spot_size = angle
-            elif light_type == 3:
-                bl_light_data.energy = lumens * self.adjust_area_intensity
-                bl_light_data.shape = 'RECTANGLE'
-                bl_light_data.size = whl.x
-                bl_light_data.size_y = whl.y
-            bl_light_obj = bpy.data.objects.new(name=actor.name + '_light', object_data=bl_light_data)
-            bl_light_obj.parent = actor
-            bl_light_obj.rotation_mode = 'QUATERNION'
-            bl_light_obj.rotation_quaternion = Quaternion((0.707107, 0, -0.707107, 0))
-            if light_type == 0:
-                sun_light_collection.objects.link(bl_light_obj)
-            elif light_type == 1:
-                point_light_collection.objects.link(bl_light_obj)
-            elif light_type == 2:
-                spot_light_collection.objects.link(bl_light_obj)
-            elif light_type == 3:
-                area_light_collection.objects.link(bl_light_obj)
+        if self.import_light:
+            for (actor_id, color, light_type, whl, attenuation, radius, temp, bias, lumens, angle) in self.psw.Lights:
+                light_type_bl = 'POINT'
+                if light_type == 0:
+                    if self.adjust_sun_intensity <= 0.0001:
+                        continue
+                    light_type_bl = 'SUN'
+                elif light_type == 1:
+                    if self.adjust_intensity <= 0.0001:
+                        continue
+                elif light_type == 2:
+                    if self.adjust_spot_intensity <= 0.0001:
+                        continue
+                    light_type_bl = 'SPOT'
+                elif light_type == 3:
+                    if self.adjust_area_intensity <= 0.0001:
+                        continue
+                    light_type_bl = 'AREA'
+                actor = actor_cache[actor_id]
+                actor_data = self.psw.Actors[actor_id]
+                bl_light_data = bpy.data.lights.new(name=actor.name + '_light', type=light_type_bl)
+                bl_light_data.use_shadow = not actor_data[6]
+                bl_light_data.color = color
+                if actor_data[8]:
+                    bl_light_data.color = convert_temperature(temp)
+                bl_light_data.shadow_soft_size = bias
+                if light_type == 0:
+                    bl_light_data.energy = lumens * self.adjust_sun_intensity
+                elif light_type == 1:
+                    bl_light_data.energy = lumens * self.adjust_intensity
+                elif light_type == 2:
+                    bl_light_data.energy = lumens * self.adjust_spot_intensity
+                    bl_light_data.spot_size = angle
+                elif light_type == 3:
+                    bl_light_data.energy = lumens * self.adjust_area_intensity
+                    bl_light_data.shape = 'RECTANGLE'
+                    bl_light_data.size = whl.x
+                    bl_light_data.size_y = whl.y
+                bl_light_obj = bpy.data.objects.new(name=actor.name + '_light', object_data=bl_light_data)
+                bl_light_obj.parent = actor
+                bl_light_obj.rotation_mode = 'QUATERNION'
+                bl_light_obj.rotation_quaternion = Quaternion((0.707107, 0, -0.707107, 0))
+                if light_type == 0:
+                    sun_light_collection.objects.link(bl_light_obj)
+                elif light_type == 1:
+                    point_light_collection.objects.link(bl_light_obj)
+                elif light_type == 2:
+                    spot_light_collection.objects.link(bl_light_obj)
+                elif light_type == 3:
+                    area_light_collection.objects.link(bl_light_obj)
 
-        tiles: map[tuple[int, int], tuple[Object, Material, ShaderNodeTexCoord, set[str]]] = {}
+        if self.import_landscape:
+            tiles: map[tuple[int, int], tuple[Object, Material, ShaderNodeTexCoord, set[str]]] = {}
+            for (tex_path, actor_id, pos, scale, type_id, tile_x, tile_y, bias, offset, dim) in self.psw.Landscapes:
+                result_path = tex_path.strip('/').strip('\\')
+                if not result_path.endswith('.png'):
+                    result_path += '.png'
+                if sep != '/':
+                    result_path = result_path.replace('/', sep)
+                result_path = normpath(join_path(self.game_dir, result_path))
 
-        for (tex_path, actor_id, pos, scale, type_id, tile_x, tile_y, bias, offset, dim) in self.psw.Landscapes:
-            result_path = tex_path.strip('/').strip('\\')
-            if not result_path.endswith('.png'):
-                result_path += '.png'
-            if sep != '/':
-                result_path = result_path.replace('/', sep)
-            result_path = normpath(join_path(self.game_dir, result_path))
-
-            if not exists(result_path):
-                log_error('WORLD', 'Can\'t find asset %s' % (tex_path))
-                continue
-
-            if type_id != 0:
-                if (tile_x, tile_y) not in tiles:
+                if not exists(result_path):
+                    log_error('WORLD', 'Can\'t find asset %s' % (tex_path))
                     continue
 
-                (landscape_obj, material, tex_coord, tracking) = tiles[(tile_x, tile_y)]
-                if tex_path in tracking:
-                    continue
-                tracking.add(tex_path)
+                if type_id != 0:
+                    if (tile_x, tile_y) not in tiles:
+                        continue
 
-                material_data = landscape_obj.material_slots[0].material
-                node_tree = material_data.node_tree
+                    (landscape_obj, material, tex_coord, tracking) = tiles[(tile_x, tile_y)]
+                    if tex_path in tracking:
+                        continue
+                    tracking.add(tex_path)
 
-                # create nodes
-                image_node: ShaderNodeTexImage = node_tree.nodes.new(type='ShaderNodeTexImage')
-                image_node.image = bpy.data.images.load(filepath=result_path, check_existing=True)
-                image_node.image.colorspace_settings.name = 'Non-Color'
-                image_node.interpolation = 'Cubic'
-                image_node.extension = 'EXTEND'
-                image_node.location = tex_coord.location + Vector((240, -((type_id - 1) * 280)))
-                image_node.label = 'Weightmap%d' % (type_id - 1)
+                    material_data = landscape_obj.material_slots[0].material
+                    node_tree = material_data.node_tree
 
-                separate_xyz: ShaderNodeSeparateXYZ = node_tree.nodes.new(type='ShaderNodeSeparateXYZ')
-                separate_xyz.location = image_node.location + Vector((360, 0))
+                    # create nodes
+                    image_node: ShaderNodeTexImage = node_tree.nodes.new(type='ShaderNodeTexImage')
+                    image_node.image = bpy.data.images.load(filepath=result_path, check_existing=True)
+                    image_node.image.colorspace_settings.name = 'Non-Color'
+                    image_node.interpolation = 'Cubic'
+                    image_node.extension = 'EXTEND'
+                    image_node.location = tex_coord.location + Vector((240, -((type_id - 1) * 280)))
+                    image_node.label = 'Weightmap%d' % (type_id - 1)
 
-                reroute: NodeReroute = node_tree.nodes.new(type='NodeReroute')
-                reroute.location = separate_xyz.location + Vector((140, -160))
-                reroute.label = 'W'
+                    separate_xyz: ShaderNodeSeparateXYZ = node_tree.nodes.new(type='ShaderNodeSeparateXYZ')
+                    separate_xyz.location = image_node.location + Vector((360, 0))
 
-                # create links
-                node_tree.links.new(tex_coord.outputs['Generated'], image_node.inputs['Vector'])
-                node_tree.links.new(image_node.outputs['Color'], separate_xyz.inputs['Vector'])
-                node_tree.links.new(image_node.outputs['Alpha'], reroute.inputs[0])
+                    reroute: NodeReroute = node_tree.nodes.new(type='NodeReroute')
+                    reroute.location = separate_xyz.location + Vector((140, -160))
+                    reroute.label = 'W'
 
-                # todo: X, Y, Z, or W needs to be connected to the Invert Alpha node
+                    # create links
+                    node_tree.links.new(tex_coord.outputs['Generated'], image_node.inputs['Vector'])
+                    node_tree.links.new(image_node.outputs['Color'], separate_xyz.inputs['Vector'])
+                    node_tree.links.new(image_node.outputs['Alpha'], reroute.inputs[0])
 
-                continue
+                    # todo: X, Y, Z, or W needs to be connected to the Invert Alpha node
 
-            actor = actor_cache[0 if actor_id == -1 else actor_id]
-            landscape_name = actor.name + '_Sector%d_%d' % (tile_x, tile_y)
-
-            if offset > Vector((0.0, 0.0, 0.0)):
-                log_warning('WORLD', 'Off-center landscape: %s (%f, %f, %f)' % (landscape_name, offset.x, offset.y, offset.z))
-
-                if self.skip_offcenter:
                     continue
 
-            base_scale = Vector((scale, scale, 255))
-            adj_scale = base_scale * dim
-            pos_offset = (adj_scale - base_scale) / 2
-            pos_offset.y *= -1
-            adj_pos = (pos + offset) + pos_offset
-            global_offset = ((scale + 1) / 2) - 1
-            adj_pos.x += global_offset
-            adj_pos.y -= global_offset
-            adj_pos.z = -bias / 1000
+                actor = actor_cache[0 if actor_id == -1 else actor_id]
+                landscape_name = actor.name + '_Sector%d_%d' % (tile_x, tile_y)
 
-            adj_scale *= self.resize_mod
-            adj_pos *= self.resize_mod
+                if offset > Vector((0.0, 0.0, 0.0)):
+                    log_warning('WORLD', 'Off-center landscape: %s (%f, %f, %f)' % (landscape_name, offset.x, offset.y, offset.z))
 
-            landscape_data: Mesh = bpy.data.meshes.new(landscape_name)
-            landscape_obj: Object = bpy.data.objects.new(name=landscape_data.name, object_data=landscape_data)
-            landscape_obj.parent = actor
-            landscape_obj.scale = adj_scale
-            landscape_obj.location = adj_pos
+                    if self.skip_offcenter:
+                        continue
 
-            landscape_nodes: GeometryNodeTree = bpy.data.node_groups.new(landscape_obj.name, 'GeometryNodeTree')
-            if hasattr(landscape_nodes, 'outputs'):
-                landscape_nodes.outputs.new('NodeSocketGeometry')
-            elif hasattr(landscape_nodes, 'interface'):
-                landscape_nodes.interface.new_socket('Geometry', in_out='OUTPUT', socket_type='NodeSocketGeometry')
-            output_node: NodeGroupOutput = landscape_nodes.nodes.new(type='NodeGroupOutput')
-            output_node.location = (400, 0)
-            output_node.is_active_output = True
-            output_node.select = False
-            group_node: GeometryNodeGroup = landscape_nodes.nodes.new(type='GeometryNodeGroup')
-            group_node.node_tree = bpy.data.node_groups['PSW Height']
-            group_node.select = False
-            img: Image = bpy.data.images.load(filepath=result_path, check_existing=True)
-            img.colorspace_settings.name = 'Non-Color'
-            group_node.inputs['Dimensions'].default_value = dim
-            group_node.inputs['Heightmap'].default_value = img
-            landscape_nodes.links.new(group_node.outputs[0], output_node.inputs[0])
+                base_scale = Vector((scale, scale, 255))
+                adj_scale = base_scale * dim
+                pos_offset = (adj_scale - base_scale) / 2
+                pos_offset.y *= -1
+                adj_pos = (pos + offset) + pos_offset
+                global_offset = ((scale + 1) / 2) - 1
+                adj_pos.x += global_offset
+                adj_pos.y -= global_offset
+                adj_pos.z = -bias / 1000
 
-            node_modifier: NodesModifier = landscape_obj.modifiers.new('Landscape Geometry', type='NODES')
-            if node_modifier.node_group is not None:
-                bpy.data.node_groups.remove(node_modifier.node_group)
-            node_modifier.node_group = landscape_nodes
+                adj_scale *= self.resize_mod
+                adj_pos *= self.resize_mod
 
-            landscape_collection.objects.link(landscape_obj)
+                landscape_data: Mesh = bpy.data.meshes.new(landscape_name)
+                landscape_obj: Object = bpy.data.objects.new(name=landscape_data.name, object_data=landscape_data)
+                landscape_obj.parent = actor
+                landscape_obj.scale = adj_scale
+                landscape_obj.location = adj_pos
 
-            material_data: Material = bpy.data.materials.get(landscape_data.name)
+                landscape_nodes: GeometryNodeTree = bpy.data.node_groups.new(landscape_obj.name, 'GeometryNodeTree')
+                if hasattr(landscape_nodes, 'outputs'):
+                    landscape_nodes.outputs.new('NodeSocketGeometry')
+                elif hasattr(landscape_nodes, 'interface'):
+                    landscape_nodes.interface.new_socket('Geometry', in_out='OUTPUT', socket_type='NodeSocketGeometry')
+                output_node: NodeGroupOutput = landscape_nodes.nodes.new(type='NodeGroupOutput')
+                output_node.location = (400, 0)
+                output_node.is_active_output = True
+                output_node.select = False
+                group_node: GeometryNodeGroup = landscape_nodes.nodes.new(type='GeometryNodeGroup')
+                group_node.node_tree = bpy.data.node_groups['PSW Height']
+                group_node.select = False
+                img: Image = bpy.data.images.load(filepath=result_path, check_existing=True)
+                img.colorspace_settings.name = 'Non-Color'
+                group_node.inputs['Dimensions'].default_value = dim
+                group_node.inputs['Heightmap'].default_value = img
+                landscape_nodes.links.new(group_node.outputs[0], output_node.inputs[0])
 
-            if material_data is None:
-                material_data = bpy.data.materials.new(landscape_data.name)
-                material_data.blend_method = 'HASHED'
-                material_data.use_nodes = True
-                bsdf = material_data.node_tree.nodes['Principled BSDF']
-                tex_coord = material_data.node_tree.nodes.new(type='ShaderNodeTexCoord')
-                tex_coord.location = bsdf.location + Vector((-1200, 0))
-                invert_color: ShaderNodeInvert = material_data.node_tree.nodes.new(type='ShaderNodeInvert')
-                invert_color.location = bsdf.location + Vector((-300, 0))
-                material_data.node_tree.links.new(invert_color.outputs['Color'], bsdf.inputs['Alpha'])
+                node_modifier: NodesModifier = landscape_obj.modifiers.new('Landscape Geometry', type='NODES')
+                if node_modifier.node_group is not None:
+                    bpy.data.node_groups.remove(node_modifier.node_group)
+                node_modifier.node_group = landscape_nodes
 
-            landscape_data.materials.append(material_data)
-            landscape_obj.material_slots[0].link = 'OBJECT'
-            landscape_obj.material_slots[0].material = material_data
+                landscape_collection.objects.link(landscape_obj)
 
-            tiles[(tile_x, tile_y)] = (landscape_obj, material_data, tex_coord, set())
+                material_data: Material = bpy.data.materials.get(landscape_data.name)
+
+                if material_data is None:
+                    material_data = bpy.data.materials.new(landscape_data.name)
+                    material_data.blend_method = 'HASHED'
+                    material_data.use_nodes = True
+                    bsdf = material_data.node_tree.nodes['Principled BSDF']
+                    tex_coord = material_data.node_tree.nodes.new(type='ShaderNodeTexCoord')
+                    tex_coord.location = bsdf.location + Vector((-1200, 0))
+                    invert_color: ShaderNodeInvert = material_data.node_tree.nodes.new(type='ShaderNodeInvert')
+                    invert_color.location = bsdf.location + Vector((-300, 0))
+                    material_data.node_tree.links.new(invert_color.outputs['Color'], bsdf.inputs['Alpha'])
+
+                landscape_data.materials.append(material_data)
+                landscape_obj.material_slots[0].link = 'OBJECT'
+                landscape_obj.material_slots[0].material = material_data
+
+                tiles[(tile_x, tile_y)] = (landscape_obj, material_data, tex_coord, set())
 
         context.view_layer.active_layer_collection = old_active_layer
 
