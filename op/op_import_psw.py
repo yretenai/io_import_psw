@@ -116,6 +116,12 @@ class op_import_psw(Operator, ImportHelper):
             default=True
     )
 
+    ignore_shapes: BoolProperty(
+            name='Ignore Shapes',
+            description='Ignore primitive shapes when enabled.',
+            default=True
+    )
+
     use_actor_name: BoolProperty(
             name='Use Actor Names',
             description='If disabled, will use the mesh name instead of the actor name.',
@@ -146,6 +152,7 @@ class op_import_psw(Operator, ImportHelper):
         layout.prop(self, 'skip_offcenter')
         layout.prop(self, 'no_static_instances')
         layout.prop(self, 'no_skeletons')
+        layout.prop(self, 'ignore_shapes')
         layout.prop(self, 'use_actor_name')
         layout.prop(self, 'base_game_dir')
 

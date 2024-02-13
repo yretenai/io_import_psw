@@ -20,6 +20,19 @@ except:
     log_error('WORLD', "failed to load ue_format")
     pass
 
+ignore_names = ['CUBE', 'SPHERE', 'CONE', 'CYLINDER', 'CAPSULE', 'BOX', 'ARROW', 'SPLINE', 'PLANE']
+
+def is_ignored_name(path: str) -> bool:
+    test = basename(path).split('.')[0].upper()
+    if test.startswith('SM_'):
+        test = test[3:]
+    elif test.startswith('SHAPE_'):
+        test = test[6:]
+    elif test.startswith('1M_'):
+        test = test[3:].split('_')[0]
+    if 'VFX_' in test: return True
+    return test in ignore_names
+
 
 def convert_temperature(temperature: float) -> Color:
     temperature = numpy.clip(temperature, 1000, 40000)
@@ -64,6 +77,7 @@ class ActorXWorld:
     skip_offcenter: bool
     no_static_instances: bool
     no_skeletons: bool
+    ignore_shapes: bool
     game_dir: str
     psw: World | None
     name: str
@@ -86,6 +100,7 @@ class ActorXWorld:
         self.import_mesh = self.settings['import_mesh']
         self.import_landscape = self.settings['import_landscape']
         self.import_light = self.settings['import_light']
+        self.ignore_shapes = self.settings['ignore_shapes']
 
         with open(self.path, 'rb') as stream:
             self.psw = read_actorx(stream, settings)
@@ -130,6 +145,9 @@ class ActorXWorld:
         actor_cache: list[Collection] = [None] * self.psw.NumActors
 
         for actor_id, (name, game_path, parent, pos, rot, scale, no_shadow, hidden, _, is_static) in enumerate(self.psw.Actors):
+            if self.ignore_shapes and is_ignored_name(name):
+                continue
+
             mesh_key = (game_path, frozenset(self.psw.OverrideMaterials[actor_id].items()))
 
             if self.no_skeletons and not is_static:
@@ -142,6 +160,8 @@ class ActorXWorld:
             if mesh_key in mesh_cache and is_static:
                 mesh_obj = mesh_cache[mesh_key]
             elif game_path != 'None' and self.import_mesh:
+                if self.ignore_shapes and is_ignored_name(game_path):
+                    continue
                 result_path = game_path.strip('/').strip('\\')
 
                 if sep != '/':
