@@ -55,8 +55,8 @@ def convert_temperature(temperature: float) -> Color:
     else:
         blue = 138.5177312231 * numpy.log(temperature - 10) - 305.0447927307
 
-    rgb = numpy.clip((red, green, blue), 0, 255)
-    return Color((rgb[0] / 255, rgb[1] / 255, rgb[2] / 255))
+    rgb = numpy.clip((red, green, blue), 0, 255) / 255
+    return Color((rgb[0], rgb[1], rgb[2]))
 
 
 def undeduplicate_name(name: str) -> str:
@@ -265,6 +265,7 @@ class ActorXWorld:
                 bl_light_data.color = color
                 if actor_data[8]:
                     bl_light_data.color = convert_temperature(temp)
+                    lumens = lumens * 100
                 bl_light_data.shadow_soft_size = bias
                 if light_type == 0:
                     bl_light_data.energy = lumens * self.adjust_sun_intensity
