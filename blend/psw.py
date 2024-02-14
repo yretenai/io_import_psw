@@ -22,6 +22,7 @@ except:
 
 ignore_names = ['CUBE', 'SPHERE', 'CONE', 'CYLINDER', 'CAPSULE', 'BOX', 'ARROW', 'SPLINE', 'PLANE']
 
+
 def is_ignored_name(path: str) -> bool:
     test = basename(path).split('.')[0].upper()
     if test.startswith('SM_'):
@@ -32,6 +33,11 @@ def is_ignored_name(path: str) -> bool:
         test = test[3:].split('_')[0]
     if 'VFX_' in test: return True
     return test in ignore_names
+
+
+def is_lodactor_or_hlod(path: str) -> bool:
+    test = basename(path).split('.')[0].upper()
+    return 'LODACTOR_' in test or '_HLOD_' in test
 
 
 def convert_temperature(temperature: float) -> Color:
@@ -101,6 +107,7 @@ class ActorXWorld:
         self.import_landscape = self.settings['import_landscape']
         self.import_light = self.settings['import_light']
         self.ignore_shapes = self.settings['ignore_shapes']
+        self.ignore_lodactors = self.settings['ignore_lodactors']
 
         with open(self.path, 'rb') as stream:
             self.psw = read_actorx(stream, settings)
@@ -147,6 +154,8 @@ class ActorXWorld:
         for actor_id, (name, game_path, parent, pos, rot, scale, no_shadow, hidden, _, is_static) in enumerate(self.psw.Actors):
             if self.ignore_shapes and is_ignored_name(name):
                 continue
+            if self.ignore_lodactors and is_lodactor_or_hlod(name):
+                continue
 
             mesh_key = (game_path, frozenset(self.psw.OverrideMaterials[actor_id].items()))
 
@@ -161,6 +170,8 @@ class ActorXWorld:
                 mesh_obj = mesh_cache[mesh_key]
             elif game_path != 'None' and self.import_mesh:
                 if self.ignore_shapes and is_ignored_name(game_path):
+                    continue
+                if self.ignore_lodactors and is_lodactor_or_hlod(game_path):
                     continue
                 result_path = game_path.strip('/').strip('\\')
 
