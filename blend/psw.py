@@ -1,4 +1,4 @@
-from os.path import basename, splitext, sep, normpath, exists
+from os.path import basename, dirname, splitext, sep, normpath, exists
 from os.path import join as join_path
 
 import numpy
@@ -112,6 +112,32 @@ class ActorXWorld:
         with open(self.path, 'rb') as stream:
             self.psw = read_actorx(stream, settings)
 
+    def try_find_umodel(self, path):
+        umodel_path = normpath(join_path(self.game_dir, path + '.uemodel'))
+        if exists(umodel_path):
+            return umodel_path
+
+        name = basename(path)
+        if not '.' in name:
+            return None
+        
+        return self.try_find_umodel(join_path(dirname(path), name[:name.index('.')]))
+
+    
+    def try_find_psk(self, path):
+        psk_path = normpath(join_path(self.game_dir, path + '.psk'))
+        if exists(psk_path):
+            return psk_path
+
+        psk_path += 'x'
+        if exists(psk_path):
+            return psk_path
+
+        name = basename(path)
+        if not '.' in name:
+            return None
+        return self.try_find_psk(join_path(dirname(path), name[:name.index('.')]))
+
     def execute(self, context: Context) -> set[str]:
         if self.psw is None or self.psw.TYPE != DataType.World:
             return {'CANCELLED'}
@@ -153,13 +179,16 @@ class ActorXWorld:
 
         for actor_id, (name, game_path, parent, pos, rot, scale, no_shadow, hidden, _, is_static) in enumerate(self.psw.Actors):
             if self.ignore_shapes and is_ignored_name(name):
+                log_info('WORLD', "skipping model %s because it is a shape" % (name))
                 continue
             if self.ignore_lodactors and is_lodactor_or_hlod(name):
+                log_info('WORLD', "skipping model %s because it is a shape" % (name))
                 continue
 
             mesh_key = (game_path, frozenset(self.psw.OverrideMaterials[actor_id].items()))
 
             if self.no_skeletons and not is_static:
+                log_info('WORLD', "skipping model %s because it is not static" % (name))
                 continue
             
             if self.no_static_instances:
@@ -170,17 +199,21 @@ class ActorXWorld:
                 mesh_obj = mesh_cache[mesh_key]
             elif game_path != 'None' and self.import_mesh:
                 if self.ignore_shapes and is_ignored_name(game_path):
+                    log_info('WORLD', "skipping model %s because it is a shape" % (game_path))
                     continue
                 if self.ignore_lodactors and is_lodactor_or_hlod(game_path):
+                    log_info('WORLD', "skipping model %s because it is a LOD actor" % (game_path))
                     continue
                 result_path = game_path.strip('/').strip('\\')
 
                 if sep != '/':
                     result_path = result_path.replace('/', sep)
-                
+        
+                found = False
                 if enable_ueformat:
-                    uemodel_path = normpath(join_path(self.game_dir, result_path + '.uemodel'))
-                    if exists(uemodel_path):
+                    uemodel_path = self.try_find_umodel(result_path)
+                    if uemodel_path is not None:
+                        found = True
                         import_settings = UEModelOptions(link=True, scale_factor=self.resize_mod, bone_length=5, reorient_bones=False)
                         if is_static:
                             mesh_obj = bpy.data.collections.new(name)
@@ -192,12 +225,9 @@ class ActorXWorld:
                         else:
                             context.view_layer.active_layer_collection = instance_layer
                             mesh_obj = UEFormatImport(import_settings).import_file(uemodel_path)
-                else:
-                    psk_path = normpath(join_path(self.game_dir, result_path + '.psk'))
-                    if not exists(psk_path):  # try getting pskx instead of psk
-                        psk_path += 'x'
-
-                    if is_static and exists(psk_path):
+                if not found:
+                    psk_path = self.try_find_psk(result_path)
+                    if is_static and psk_path is not None:
                         log_info('WORLD', "importing model %s" % (psk_path))
                         import_settings = self.settings.copy()
                         import_settings['override_materials'] = self.psw.OverrideMaterials[actor_id]

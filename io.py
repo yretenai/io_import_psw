@@ -163,6 +163,8 @@ class Mesh:
             self.NPShapeNames = value
         elif key == 'SHAPEELEMS':
             self.NPPhysics = value
+        else:
+            log_error('ACTORX', 'Unhandled chunk %s' % (key))
 
     def finalize(self, settings: dict[str, Property]):
         # todo(ada): investigate if this can be converted to numpy.
@@ -292,6 +294,8 @@ class Animation:
             self.NPBones = value
         elif key == 'ANIMKEYS':
             self.NPKeys = value
+        else:
+            log_error('ACTORX', 'Unhandled chunk %s' % (key))
 
     def finalize(self, settings: dict[str, Property]):
         resize_by: float = settings['resize_by'] if 'resize_by' in settings else 0.01
@@ -364,6 +368,8 @@ class AnimationV2:
             self.NPRotTracks.append(value)
         elif key[:8] == 'SCLTRACK':
             self.NPSclTracks.append(value)
+        else:
+            log_error('ACTORX', 'Unhandled chunk %s' % (key))
 
     def finalize(self, settings: dict[str, Property]):
         resize_by: float = settings['resize_by'] if 'resize_by' in settings else 0.01
@@ -440,6 +446,8 @@ class World:
             self.NPMaterials = value
         elif key == 'LANDSCAPE':
             self.NPLandscapes = value
+        else:
+            log_error('ACTORX', 'Unhandled chunk %s' % (key))
 
     def finalize(self, settings: dict[str, Property]):
         resize_by: float = settings['resize_by'] if 'resize_by' in settings else 0.01
