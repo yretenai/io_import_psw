@@ -43,6 +43,7 @@ dispatch: dict[str, DTypeLike] = {
         'WORLDLIGHTS':  dtype([('parent', 'i'), ('color', '4B'), ('type', 'i'), ('whl', '3f'), ('attenuation', 'f'), ('radius', 'f'), ('temp', 'f'), ('bias', 'f'), ('lumens', 'f'), ('angle', 'f')]),
         'LANDSCAPE':    dtype([('name', '256b'), ('actor_id', 'i'), ('x', 'i'), ('y', 'i'), ('type', 'i'), ('size', 'i'), ('bias', 'i'), ('offset', '2f'), ('dim', '2i')]),
         'INSTMATERIAL': dtype([('actor_id', 'i'), ('material_id', 'i'), ('name', '64b')]),
+        'INSTMATERIAL::2': dtype([('actor_id', 'i'), ('material_id', 'i'), ('name', '256b')]),
 }
 
 
@@ -431,13 +432,11 @@ class World:
         self.NPLandscapes = None
 
     def __setitem__(self, key: str, value: ndarray):
-        if key == 'WORLDACTORS':
-            self.NPActors = value
-        elif key == 'WORLDACTORS::2':
+        if key == 'WORLDACTORS' or key == 'WORLDACTORS::2':
             self.NPActors = value
         elif key == 'WORLDLIGHTS':
             self.NPLights = value
-        elif key == 'INSTMATERIAL':
+        elif key == 'INSTMATERIAL' or key == 'INSTMATERIAL::2':
             self.NPMaterials = value
         elif key == 'LANDSCAPE':
             self.NPLandscapes = value
