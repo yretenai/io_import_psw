@@ -179,17 +179,18 @@ class ActorXWorld:
 
         for actor_id, (name, game_path, parent, pos, rot, scale, no_shadow, hidden, _, is_static) in enumerate(self.psw.Actors):
             if self.ignore_shapes and is_ignored_name(name):
-                log_info('WORLD', "skipping model %s because it is a shape" % (name))
-                continue
+                log_info('WORLD', "hiding model %s because it is a shape" % (name))
+                hidden = True
             if self.ignore_lodactors and is_lodactor_or_hlod(name):
-                log_info('WORLD', "skipping model %s because it is a shape" % (name))
-                continue
+                log_info('WORLD', "hiding model %s because it is a LOD Actor" % (name))
+                hidden = True
 
             mesh_key = (game_path, frozenset(self.psw.OverrideMaterials[actor_id].items()))
 
+            skip_load = False
             if self.no_skeletons and not is_static:
                 log_info('WORLD', "skipping model %s because it is not static" % (name))
-                continue
+                skip_load = True
             
             if self.no_static_instances:
                 is_static = False
@@ -197,13 +198,13 @@ class ActorXWorld:
             mesh_obj = None
             if mesh_key in mesh_cache and is_static:
                 mesh_obj = mesh_cache[mesh_key]
-            elif game_path != 'None' and self.import_mesh:
+            elif game_path != 'None' and self.import_mesh and skip_load is False:
                 if self.ignore_shapes and is_ignored_name(game_path):
-                    log_info('WORLD', "skipping model %s because it is a shape" % (game_path))
-                    continue
+                    log_info('WORLD', "hiding model %s because it is a shape" % (game_path))
+                    hidden = True
                 if self.ignore_lodactors and is_lodactor_or_hlod(game_path):
-                    log_info('WORLD', "skipping model %s because it is a LOD actor" % (game_path))
-                    continue
+                    log_info('WORLD', "hiding model %s because it is a LOD actor" % (game_path))
+                    hidden = True
                 result_path = game_path.strip('/').strip('\\')
 
                 if sep != '/':
@@ -268,6 +269,7 @@ class ActorXWorld:
 
             if hidden:
                 instance.hide_render = True
+                instance.hide_viewport = True
                 instance.show_instancer_for_render = False
 
             if parent > -1:
