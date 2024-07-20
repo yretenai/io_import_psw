@@ -148,7 +148,7 @@ size.
 So if scale.UP is not identical to size, adjust accordingly. You can optimize it by setting the vertical scale to 256
 and ignoring height_mod.
 
-Offset is the offset in the texture map, multiple sectors can subdivide the same texture. `Dimensions` indicates how many 
+Offset is the offset in the texture map, multiple sectors can subdivide the same texture. `Dimensions` indicates how many
 sectors should be in the texture.
 
 ## Why an animation format change?

@@ -8,45 +8,45 @@ from io_import_pskx.blend.psk import ActorXMesh
 
 
 class op_import_psk(Operator, ImportHelper):
-    bl_idname = 'import_mesh.psk'
-    bl_label = 'Import ActorX PSK'
-    bl_options = {'REGISTER', 'UNDO'}
+	bl_idname = 'import_mesh.psk'
+	bl_label = 'Import ActorX PSK'
+	bl_options = {'REGISTER', 'UNDO'}
 
-    filter_glob: StringProperty(default='*.psk;*.pskx', options={'HIDDEN'})
+	filter_glob: StringProperty(default='*.psk;*.pskx', options={'HIDDEN'})
 
-    files: CollectionProperty(
-            name='File Path',
-            type=OperatorFileListElement,
-    )
+	files: CollectionProperty(
+			name='File Path',
+			type=OperatorFileListElement,
+	)
 
-    resize_by: FloatProperty(
-            name='Scale',
-            description='Resize By',
-            default=0.01,
-            min=0.01,
-            soft_max=10.0
-    )
+	resize_by: FloatProperty(
+			name='Scale',
+			description='Resize By',
+			default=0.01,
+			min=0.01,
+			soft_max=10.0
+	)
 
-    def draw(self, context: Context):
-        layout = self.layout
+	def draw(self, context: Context):
+		layout = self.layout
 
-        layout.use_property_split = True
-        layout.use_property_decorate = True
+		layout.use_property_split = True
+		layout.use_property_decorate = True
 
-        layout.prop(self, 'resize_by')
+		layout.prop(self, 'resize_by')
 
-    def execute(self, context: Context) -> Union[Set[str], Set[int]]:
-        import os
+	def execute(self, context: Context) -> Union[Set[str], Set[int]]:
+		import os
 
-        settings: dict[str, Property] = self.as_keywords()
+		settings: dict[str, Property] = self.as_keywords()
 
-        if self.files:
-            dirname = os.path.dirname(self.filepath)
-            ret = {'CANCELLED'}
-            for file in self.files:
-                path = os.path.join(dirname, file.name)
-                if ActorXMesh(path, settings).execute(context) == {'FINISHED'}:
-                    ret = {'FINISHED'}
-            return ret
-        else:
-            return ActorXMesh(self.filepath, settings).execute(context)
+		if self.files:
+			dirname = os.path.dirname(self.filepath)
+			ret = {'CANCELLED'}
+			for file in self.files:
+				path = os.path.join(dirname, file.name)
+				if ActorXMesh(path, settings).execute(context) == {'FINISHED'}:
+					ret = {'FINISHED'}
+			return ret
+		else:
+			return ActorXMesh(self.filepath, settings).execute(context)
