@@ -4,8 +4,8 @@ import bpy
 from bpy.props import StringProperty, CollectionProperty, FloatProperty
 from bpy.types import Operator, Context, Property, OperatorFileListElement, TOPBAR_MT_file_import
 from bpy_extras.io_utils import ImportHelper
-from io_import_pskx.blend.mat import CUEMaterial
-from io_import_pskx.utils import find_root_from_path
+from io_import_psw.blend.mat import CUEMaterial
+from io_import_psw.utils import find_root_from_path
 
 
 class op_import_mat(Operator, ImportHelper):

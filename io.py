@@ -1,43 +1,15 @@
 import typing
-from enum import Enum
 from struct import unpack
 
 import numpy
 from bpy.types import Property
-from io_import_pskx.utils import fix_string_np, fix_string, log_error
+from io_import_psw.utils import fix_string_np, fix_string, log_error
 from mathutils import Quaternion, Vector, Color
 from numpy import dtype, ndarray
 from numpy.typing import DTypeLike
 
 
 dispatch: dict[str, DTypeLike] = {
-		'PNTS0000':     dtype([('xyz', '3f')]),
-		'VTXW0000':     dtype([('vertex_id', 'I'), ('uv', '2f'), ('mat_id', 'B')], align=True),
-		'VTXW3200':     dtype([('vertex_id', 'I'), ('uv', '2f'), ('mat_id', 'B')], align=True),
-		'FACE0000':     dtype([('abc', '3H'), ('mat_id', 'B'), ('aux_mat_id', 'B'), ('group', 'I')]),
-		'FACE3200':     dtype([('abc', '3I'), ('mat_id', 'B'), ('aux_mat_id', 'B'), ('group', 'I')]),
-		'VTXNORMS':     dtype([('xyz', '3f')]),
-		'VTXTANGS':     dtype([('xyzw', '4f')]),
-		'MATT0000':     dtype([('name', '64b'), ('tex_id', 'i'), ('poly_flags', 'I'), ('aux_mat_id', 'i'), ('aux_flags', 'I'), ('lod_bias', 'i'), ('lod_style', 'i')]),
-		'REFSKELT':     dtype([('name', '64b'), ('flags', 'I'), ('num_children', 'i'), ('parent_id', 'i'), ('rot', '4f'), ('pos', '3f'), ('length', 'f'), ('scale', '3f')]),
-		'REFSKEL0':     dtype([('name', '64b'), ('flags', 'I'), ('num_children', 'i'), ('parent_id', 'i'), ('rot', '4f'), ('pos', '3f'), ('length', 'f'), ('scale', '3f')]),
-		'SKELSOCK':     dtype([('name', '64b'), ('bone_name', '64b'), ('pos', '3f'), ('rot', '3f'), ('scale', '3f')]),
-		'BONENAMES':    dtype([('name', '64b'), ('flags', 'I'), ('num_children', 'i'), ('parent_id', 'i'), ('rot', '4f'), ('pos', '3f'), ('length', 'f'), ('scale', '3f')]),
-		'RAWWEIGHTS':   dtype([('weight', 'f'), ('vertex_id', 'i'), ('bone_id', 'i')]),
-		'RAWW0000':     dtype([('weight', 'f'), ('vertex_id', 'i'), ('bone_id', 'i')]),
-		'VERTEXCOLOR':  dtype([('rgba', '4B')]),
-		'EXTRAUVS':     dtype([('uv', '2f')]),
-		'MORPHTARGET':  dtype([('vertex_id', 'i'), ('xyz', '3f')]),
-		'MORPHNAMES':   dtype([('name', '64b')]),
-		'PHYSICS0':     dtype([('name', '64b'), ('type', 'B'), ('center', '3f'), ('rot', '3f'), ('scale', '3f')]),
-		'SHAPEELEMS':   dtype([('name', '64b'), ('type', 'i'), ('center', '3f'), ('rot', '4f'), ('scale', '3f')]),
-		'ANIMINFO':     dtype([('name', '64b'), ('group', '64b'), ('total_bones', 'i'), ('root_included', 'i'), ('key_compression_style', 'i'), ('key_quotum', 'i'), ('key_reduction', 'f'), ('duration', 'f'), ('frame_rate', 'f'), ('start_bone', 'i'), ('first_frame', 'i'), ('num_frames', 'i')]),
-		'ANIMKEYS':     dtype([('pos', '3f'), ('rot', '4f'), ('time', 'f')]),
-		'SCALEKEYS':    dtype([('scale', '3f'), ('time', 'f')]),
-		'SEQUENCES':    dtype([('name', '64b'), ('framerate', 'f'), ('additive', 'i')]),
-		'ROTTRACK':     dtype([('time', 'f'), ('xyzw', '4f')]),
-		'POSTRACK':     dtype([('time', 'f'), ('xyz', '3f')]),
-		'SCLTRACK':     dtype([('time', 'f'), ('xyz', '3f')]),
 		'WORLDACTORS::3': dtype([('name', '256b'), ('asset', '256b'), ('parent', 'i'), ('pos', '3f'), ('rot', '4f'), ('scale', '3f'), ('flags', 'i'), ('material_start', 'i'), ('material_len', 'i')]),
 		'WORLDACTORS::2': dtype([('name', '256b'), ('asset', '256b'), ('parent', 'i'), ('pos', '3f'), ('rot', '4f'), ('scale', '3f'), ('flags', 'i')]),
 		'WORLDACTORS':  dtype([('name', '64b'), ('asset', '256b'), ('parent', 'i'), ('pos', '3f'), ('rot', '4f'), ('scale', '3f'), ('flags', 'i')]),
@@ -49,371 +21,7 @@ dispatch: dict[str, DTypeLike] = {
 }
 
 
-class PhysicsShape(Enum):
-	Cube = 0
-	Sphere = 1
-	Cylinder = 2
-	Convex = 3
-	Cone = 4
-
-
-class DataType(Enum):
-	Mesh = 0
-	Animation = 1
-	AnimationV2 = 2
-	World = 3
-
-
-class Mesh:
-	TYPE: DataType = DataType.Mesh
-
-	NumVertices: int
-	NumFaces: int
-	NumMaterials: int
-	NumShapes: int
-	NumUVs: int
-	NumBones: int
-	NumSockets: int
-	NumHitboxes: int
-
-	Vertices: list[list[float]]
-	Faces: list[list[int]]
-	Normals: list[list[float]] | None
-	Tangents: list[list[float]] | None
-	Materials: list[int] | None
-	MaterialNames: list[str] | None
-	Bones: list[tuple[str, int, Quaternion, Vector, Vector]] | None
-	Weights: list[tuple[int, int, float]] | None
-	Sockets: list[tuple[str, str, Vector, Vector, Vector]] | None
-	Colors: list[list[float]] | None
-	UVs: list[list[float]]
-	ShapeKeys: dict[str, list[float]]
-	Physics: list[tuple[str, PhysicsShape, Vector, Quaternion, Vector]]
-
-	NPPoints: ndarray
-	NPWedges: ndarray
-	NPFaces: ndarray
-	NPNormals: ndarray | None
-	NPTangents: ndarray | None
-	NPMaterials: ndarray | None
-	NPBones: ndarray | None
-	NPWeights: ndarray | None
-	NPColors: ndarray | None
-	NPUVs: list[ndarray]
-	NPShapeKeys: list[ndarray]
-	NPShapeNames: ndarray | None
-	NPPhysics: ndarray | None
-
-	def __init__(self):
-		self.NumMaterials = 0
-		self.NumShapes = 0
-		self.NumUVs = 0
-		self.NumBones = 0
-		self.NumHitboxes = 0
-		self.NumSockets = 0
-
-		self.Normals = None
-		self.Tangents = None
-		self.Materials = None
-		self.MaterialNames = None
-		self.Bones = None
-		self.Weights = None
-		self.Colors = None
-		self.UVs = list()
-		self.ShapeKeys = {}
-		self.Physics = None
-		self.Sockets = None
-
-		self.NPNormals = None
-		self.NPTangents = None
-		self.NPMaterials = None
-		self.NPBones = None
-		self.NPWeights = None
-		self.NPColors = None
-		self.NPUVs = list()
-		self.NPShapeKeys = list()
-		self.NPShapeNames = None
-		self.NPPhysics = None
-		self.NPSockets = None
-
-	def __setitem__(self, key: str, value: ndarray):
-		if key == 'PNTS0000':
-			self.NPPoints = value
-		elif key == 'VTXW0000' or key == 'VTXW3200':
-			self.NPWedges = value
-		elif key == 'FACE0000' or key == 'FACE3200':
-			self.NPFaces = value
-		elif key == 'VTXNORMS':
-			self.NPNormals = value
-		elif key == 'VTXTANGS':
-			self.NPTangents = value
-		elif key == 'MATT0000':
-			self.NPMaterials = value
-		elif key == 'REFSKELT' or key == 'REFSKEL0' or key == 'BONENAMES':
-			self.NPBones = value
-		elif key == 'RAWWEIGHTS' or key == 'RAWW0000':
-			self.NPWeights = value
-		elif key == 'VERTEXCOLOR':
-			self.NPColors = value
-		elif key == 'SKELSOCK':
-			self.NPSockets = value
-		elif key[:8] == 'EXTRAUVS':
-			self.NPUVs.append(value)
-		elif key[:11] == 'MORPHTARGET':
-			self.NPShapeKeys.append(value)
-		elif key == 'MORPHNAMES':
-			self.NPShapeNames = value
-		elif key == 'SHAPEELEMS':
-			self.NPPhysics = value
-		else:
-			log_error('ACTORX', 'Unhandled chunk %s' % (key))
-
-	def finalize(self, settings: dict[str, Property]):
-		# todo(ada): investigate if this can be converted to numpy.
-		self.NumVertices = len(self.NPWedges)
-		self.NumFaces = len(self.NPFaces)
-
-		self.Vertices = [None] * self.NumVertices
-
-		resize_by: float = settings['resize_by'] if 'resize_by' in settings else 0.01
-
-		for wedge_id, (vertex_id, uv, material_id) in enumerate(self.NPWedges):
-			self.Vertices[wedge_id] = (self.NPPoints[vertex_id]['xyz'] * resize_by).tolist()
-
-		self.Faces = [None] * self.NumFaces
-		self.UVs = [[None] * self.NumFaces * 3]
-		NPWedgeUV = (self.NPWedges['uv'] * [(1.0, -1.0)] + [(0.0, 1.0)]).tolist()
-		has_materials = self.NPMaterials is not None and len(self.NPMaterials) > 0
-		if has_materials:
-			self.Materials = [None] * self.NumFaces
-		for face_id, (rgb, material_id, _, _) in enumerate(self.NPFaces):
-			self.Faces[face_id] = [rgb[1], rgb[0], rgb[2]]
-			self.UVs[0][face_id * 3 + 0] = NPWedgeUV[self.Faces[face_id][0]]
-			self.UVs[0][face_id * 3 + 1] = NPWedgeUV[self.Faces[face_id][1]]
-			self.UVs[0][face_id * 3 + 2] = NPWedgeUV[self.Faces[face_id][2]]
-			if has_materials:
-				self.Materials[face_id] = material_id
-
-		if self.NPNormals is not None and len(self.NPNormals) > 0:
-			self.Normals = [None] * self.NumVertices
-			for wedge_id, rgb in enumerate(self.NPNormals['xyz']):
-				self.Normals[wedge_id] = rgb
-
-		if self.NPTangents is not None and len(self.NPTangents) > 0:
-			self.Tangents = [None] * self.NumVertices
-			for wedge_id, rgb in enumerate(self.NPTangents['xyzw']):
-				self.Tangents[wedge_id] = rgb
-
-		if has_materials:
-			self.NumMaterials = len(self.NPMaterials)
-			self.MaterialNames = [None] * self.NumMaterials
-			for material_id, material_name in enumerate(self.NPMaterials['name']):
-				self.MaterialNames[material_id] = fix_string_np(material_name)
-
-		if self.NPBones is not None and len(self.NPBones) > 0:
-			self.NumBones = len(self.NPBones)
-			self.Bones = [None] * self.NumBones
-			for bone_id, (bone_name, flags, num_children, parent_id, rot, pos, length, scale) in enumerate(self.NPBones):
-				self.Bones[bone_id] = (fix_string_np(bone_name), parent_id, Quaternion((rot[3], rot[0], rot[1], rot[2])), Vector((pos[0], pos[1], pos[2])) * resize_by, Vector((scale[0], scale[1], scale[2])) * resize_by)
-
-		if self.NPWeights is not None and len(self.NPWeights) > 0:
-			self.Weights = self.NPWeights.tolist()
-
-		if self.NPSockets is not None and len(self.NPSockets) > 0:
-			self.NumSockets = len(self.NPSockets)
-			self.Sockets = [None] * self.NumSockets
-			for socket_id, (socket_name, bone_name, pos, rot, scale) in enumerate(self.NPSockets):
-				self.Sockets[socket_id] = (fix_string_np(socket_name), fix_string_np(bone_name), Vector((pos[0], pos[1], pos[2])) * resize_by, Vector((rot[0], rot[1], rot[2])), Vector((scale[0], scale[1], scale[2])) * resize_by)
-
-		if self.NPColors is not None and len(self.NPColors) > 0:
-			self.Colors = [None] * self.NumFaces * 3
-			NPColorsFloat = (self.NPColors['rgba'] / 0xff).tolist()
-			for face_id, (a, b, c) in enumerate(self.Faces):
-				self.Colors[face_id * 3] = NPColorsFloat[a]
-				self.Colors[face_id * 3 + 1] = NPColorsFloat[b]
-				self.Colors[face_id * 3 + 2] = NPColorsFloat[c]
-
-		if self.NPUVs is not None and len(self.NPUVs) > 0:
-			for uv_id, NPUV in enumerate(self.NPUVs):
-				NPExtraUV = (NPUV['uv'] * [(1.0, -1.0)] + [(0.0, 1.0)]).tolist()
-				ExtraUV = [None] * self.NumFaces * 3
-				for face_id, (a, b, c) in enumerate(self.Faces):
-					ExtraUV[face_id * 3 + 0] = NPExtraUV[a]
-					ExtraUV[face_id * 3 + 1] = NPExtraUV[b]
-					ExtraUV[face_id * 3 + 2] = NPExtraUV[c]
-				self.UVs.append(ExtraUV)
-		self.NumUVs = len(self.UVs)
-
-		if self.NPShapeKeys is not None and self.NPShapeNames is not None and len(self.NPShapeKeys) > 0 and len(self.NPShapeNames) > 0:
-			self.NumShapes = len(self.NPShapeKeys)
-			for shape_id, shape_data in enumerate(self.NPShapeKeys):
-				shape_data['xyz'] *= resize_by
-				shape_name = fix_string_np(self.NPShapeNames['name'][shape_id])
-				self.ShapeKeys[shape_name] = self.Vertices.copy()
-				for vertex_id, shape_delta in shape_data.tolist():
-					self.ShapeKeys[shape_name][int(vertex_id)] = shape_delta
-
-		if self.NPPhysics is not None and len(self.NPPhysics) > 0:
-			self.NumHitboxes = len(self.NPPhysics)
-			# todo(ada): physics
-
-
-class Animation:
-	TYPE: DataType = DataType.Animation
-
-	NumSequences: int
-	NumBones: int
-	NumKeys: int
-
-	Sequences: list[tuple[str, str, int, int, float]] | None
-	Bones: list[tuple[str, int, Quaternion, Vector, Vector]] | None
-	Keys: list[tuple[float, Vector, Quaternion]] | None
-
-	NPSequences: ndarray | None
-	NPBones: ndarray | None
-	NPKeys: ndarray | None
-
-	def __init__(self):
-		self.NumSequences = 0
-		self.NumBones = 0
-		self.NumKeys = 0
-
-		self.Sequences = None
-		self.Bones = None
-		self.Keys = None
-
-		self.NPSequences = None
-		self.NPBones = None
-		self.NPKeys = None
-
-	def __setitem__(self, key: str, value: ndarray):
-		if len(value) == 0:
-			return
-
-		if key == 'ANIMINFO':
-			self.NPSequences = value
-		elif key == 'REFSKELT' or key == 'REFSKEL0' or key == 'BONENAMES':
-			self.NPBones = value
-		elif key == 'ANIMKEYS':
-			self.NPKeys = value
-		else:
-			log_error('ACTORX', 'Unhandled chunk %s' % (key))
-
-	def finalize(self, settings: dict[str, Property]):
-		resize_by: float = settings['resize_by'] if 'resize_by' in settings else 0.01
-
-		self.NumSequences = len(self.NPSequences)
-		self.Sequences = [None] * self.NumSequences
-		for sequence_id, (name, group, total_bones, rooted, compression_style, quotum, reduction, duration, framerate, first_bone, first_frame, raw_frames) in enumerate(self.NPSequences):
-			self.Sequences[sequence_id] = (fix_string_np(name), fix_string_np(group), total_bones, raw_frames, framerate)
-
-		self.NumBones = len(self.NPBones)
-		self.Bones = [None] * self.NumBones
-		for bone_id, (bone_name, flags, num_children, parent_id, rot, pos, length, scale) in enumerate(self.NPBones):
-			self.Bones[bone_id] = (fix_string_np(bone_name), parent_id, Quaternion((rot[3], rot[0], rot[1], rot[2])), Vector((pos[0], pos[1], pos[2])) * resize_by, Vector((scale[0], scale[1], scale[2])) * resize_by)
-
-		self.NumKeys = len(self.NPKeys)
-		self.Keys = [None] * self.NumKeys
-
-		for key_id, (pos, rot, time) in enumerate(self.NPKeys.tolist()):
-			self.Keys[key_id] = (time, Vector(pos) * resize_by, Quaternion((rot[3], rot[0], rot[1], rot[2])))
-
-
-class AnimationV2:
-	TYPE: DataType = DataType.AnimationV2
-
-	NumBones: int
-
-	SequenceName: str | None
-	Additive: bool
-	ResizeBy: float
-	Bones: list[tuple[str, int, Quaternion, Vector, Vector]] | None
-	PosKeys: list[list[tuple[float, Vector]]] | None
-	SclKeys: list[list[tuple[float, Quaternion]]] | None
-	RotKeys: list[list[tuple[float, Quaternion]]] | None
-	PosKeyLength = list[int]
-	SclKeyLength = list[int]
-	RotKeyLength = list[int]
-
-	NPBones: ndarray | None
-	NPSequences: ndarray | None
-	NPPosTracks: list[list[ndarray]] | None
-	NPRotTracks: list[list[ndarray]] | None
-
-	def __init__(self):
-		self.NumSequences = 0
-		self.NumBones = 0
-
-		self.SequenceName = None
-		self.Additive = False
-		self.ResizeBy = 1.0
-		self.Bones = None
-		self.PosKeys = None
-		self.RotKeys = None
-		self.PosKeyLength = None
-		self.RotKeyLength = None
-
-		self.NPBones = None
-		self.NPSequences = None
-		self.NPPosTracks = list()
-		self.NPSclTracks = list()
-		self.NPRotTracks = list()
-
-	def __setitem__(self, key: str, value: ndarray):
-		if key == 'REFSKELT' or key == 'REFSKEL0' or key == 'BONENAMES':
-			self.NPBones = value
-		elif key == 'SEQUENCES':
-			self.NPSequences = value
-		elif key[:8] == 'POSTRACK':
-			self.NPPosTracks.append(value)
-		elif key[:8] == 'ROTTRACK':
-			self.NPRotTracks.append(value)
-		elif key[:8] == 'SCLTRACK':
-			self.NPSclTracks.append(value)
-		else:
-			log_error('ACTORX', 'Unhandled chunk %s' % (key))
-
-	def finalize(self, settings: dict[str, Property]):
-		resize_by: float = settings['resize_by'] if 'resize_by' in settings else 0.01
-
-		self.NumBones = len(self.NPBones)
-		self.Bones = [None] * self.NumBones
-		for bone_id, (bone_name, flags, num_children, parent_id, rot, pos, length, scale) in enumerate(self.NPBones):
-			self.Bones[bone_id] = (fix_string_np(bone_name), parent_id, Quaternion((rot[3], rot[0], rot[1], rot[2])), Vector(pos) * resize_by, Vector(scale))
-
-		self.SequenceName = fix_string_np(self.NPSequences[0]['name'])
-		self.Additive = bool(self.NPSequences[0]['additive'])
-
-		self.PosKeys = [None] * self.NumBones
-		self.SclKeys = [None] * self.NumBones
-		self.RotKeys = [None] * self.NumBones
-		self.PosKeyLength = [len(keys) for keys in self.NPPosTracks]
-		self.SclKeyLength = [len(keys) for keys in self.NPSclTracks]
-		self.RotKeyLength = [len(keys) for keys in self.NPRotTracks]
-
-		self.ResizeBy = resize_by
-
-		for bone_id in range(self.NumBones):
-			NBBonePosKeys: list[tuple[time, list[float]]] = self.NPPosTracks[bone_id].tolist()
-			self.PosKeys[bone_id] = [None] * len(NBBonePosKeys)
-			for pos_id, (time, pos) in enumerate(NBBonePosKeys):
-				self.PosKeys[bone_id][pos_id] = (time, Vector(pos) * resize_by)
-
-			if len(self.NPSclTracks) > bone_id:
-				NBBoneSclKeys: list[tuple[time, list[float]]] = self.NPSclTracks[bone_id].tolist()
-				self.SclKeys[bone_id] = [None] * len(NBBoneSclKeys)
-				for Scl_id, (time, Scl) in enumerate(NBBoneSclKeys):
-					self.SclKeys[bone_id][Scl_id] = (time, Vector(Scl))
-
-			NBBoneRotKeys: list[tuple[time, list[float]]] = self.NPRotTracks[bone_id].tolist()
-			self.RotKeys[bone_id] = [None] * len(NBBoneRotKeys)
-			for rot_id, (time, rot) in enumerate(NBBoneRotKeys):
-				self.RotKeys[bone_id][rot_id] = (time, Quaternion((rot[3], rot[0], rot[1], rot[2])))
-
-
 class World:
-	TYPE: DataType = DataType.World
-
 	NumActors: int
 
 	Actors: list[tuple[str, str, int, Vector, Quaternion, Vector, bool, bool, bool, bool, int, int]]  # bools = no shadow, hidden, use_temp, is_static
@@ -454,7 +62,7 @@ class World:
 		elif key == 'LANDSCAPE':
 			self.NPLandscapes = value
 		else:
-			log_error('ACTORX', 'Unhandled chunk %s' % (key))
+			log_error('PSW', 'Unhandled chunk %s' % (key))
 
 	def finalize(self, settings: dict[str, Property]):
 		resize_by: float = settings['resize_by'] if 'resize_by' in settings else 0.01
@@ -489,23 +97,17 @@ def read_chunk(stream: typing.BinaryIO) -> tuple[ndarray | None, str]:
 		if chunk_key == chunk_id or chunk_id.startswith(chunk_key):
 			return (numpy.fromfile(stream, dtype=dispatch[chunk_key], count=chunk_count), chunk_id)
 
-	log_error('ACTORX', 'No parser found for %s!' % (chunk_id))
+	log_error('PSW', 'No parser found for %s!' % (chunk_id))
 
 	stream.seek(total_size, 1)
 
 	return (None, chunk_id)
 
 
-def read_actorx(stream: typing.BinaryIO, settings: dict[str, Property]) -> Animation | Mesh | None:
+def read_file(stream: typing.BinaryIO, settings: dict[str, Property]) -> World | None:
 	ob = None
 	magic = fix_string(unpack('20s', stream.read(20))[0])
-	if magic == 'ACTRHEAD':
-		ob = Mesh()
-	elif magic == 'ANIXHEAD':
-		ob = AnimationV2()
-	elif magic == 'ANIMHEAD':
-		ob = Animation()
-	elif magic == 'WRLDHEAD':
+	if magic == 'WRLDHEAD':
 		ob = World()
 	else:
 		return None

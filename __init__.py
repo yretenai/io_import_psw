@@ -2,14 +2,14 @@ from typing import Any
 
 
 bl_info = {
-		'name':        'Import ActorX Mesh/Animations (.psk, .psa)',
+		'name':        'Import PSW Scene (.psw)',
 		'author':      'yretenai',
 		'version':     (1, 2, 0),
 		'blender':     (4, 0, 0),
-		'location':    'File > Import > PSK',
-		'description': 'Import ActorX mesh or animation files',
+		'location':    'File > Import > PSW',
+		'description': 'Import PSW Scene files',
 		'warning':     '',
-		'tracker_url': 'https://github.com/yretenai/io_import_pskx/issues',
+		'tracker_url': 'https://github.com/yretenai/io_import_psw/issues',
 		'support':     'COMMUNITY',
 		'category':    'Import-Export'
 }
@@ -36,7 +36,7 @@ def reload_package(module_dict_main: dict[str, Any]) -> None:
 if 'op' in locals():
 	reload_package(locals())
 else:
-	from io_import_pskx import op
+	from io_import_psw import op
 
 
 def register():

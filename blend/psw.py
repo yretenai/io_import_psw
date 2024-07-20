@@ -3,13 +3,12 @@ from os.path import join as join_path
 
 import numpy
 import bpy.types
-import io_import_pskx.utils as utils
+import io_import_psw.utils as utils
 from bpy.types import Property, Context, Collection, Mesh, Object, NodesModifier, GeometryNodeTree, NodeGroupOutput, GeometryNodeGroup, Image, Material, ShaderNodeTexCoord, ShaderNodeSeparateXYZ, NodeReroute, ShaderNodeTexImage
 from mathutils import Quaternion, Vector, Color
-from io_import_pskx.io import read_actorx, World, DataType
-from io_import_pskx.blend.psk import ActorXMesh
-from io_import_pskx.blend.mat import CUEMaterial
-from io_import_pskx.utils import log_error, log_warning, log_info
+from io_import_psw.io import read_file, World
+from io_import_psw.blend.mat import CUEMaterial
+from io_import_psw.utils import log_error, log_warning, log_info
 
 enable_ueformat = False
 try:
@@ -73,7 +72,7 @@ def undeduplicate_name(name: str) -> str:
 		return name[:-4]
 	return name
 
-class ActorXWorld:
+class World:
 	path: str
 	settings: dict[str, Property]
 	resize_mod: float
@@ -111,7 +110,7 @@ class ActorXWorld:
 		self.ignore_lodactors = self.settings['ignore_lodactors']
 
 		with open(self.path, 'rb') as stream:
-			self.psw = read_actorx(stream, settings)
+			self.psw = read_file(stream, settings)
 
 	def try_find_material(self, path):
 		json_path = normpath(join_path(self.game_dir, path + '.json'))
@@ -139,23 +138,8 @@ class ActorXWorld:
 
 		return self.try_find_umodel(join_path(dirname(path), name[:name.index('.')]))
 
-
-	def try_find_psk(self, path):
-		psk_path = normpath(join_path(self.game_dir, path + '.psk'))
-		if exists(psk_path):
-			return psk_path
-
-		psk_path += 'x'
-		if exists(psk_path):
-			return psk_path
-
-		name = basename(path)
-		if not '.' in name:
-			return None
-		return self.try_find_psk(join_path(dirname(path), name[:name.index('.')]))
-
 	def execute(self, context: Context) -> set[str]:
-		if self.psw is None or self.psw.TYPE != DataType.World:
+		if self.psw is None:
 			return {'CANCELLED'}
 
 		if len(self.game_dir) == 0:
@@ -247,19 +231,8 @@ class ActorXWorld:
 							mesh_obj = UEFormatImport(import_settings).import_file(uemodel_path)
 							target_obj = mesh_obj
 				if not found:
-					psk_path = self.try_find_psk(result_path)
-					if is_static and psk_path is not None:
-						log_info('WORLD', "importing model %s" % (psk_path))
-						import_settings = self.settings.copy()
-						psk = ActorXMesh(psk_path, import_settings)
-						mesh_obj = bpy.data.collections.new(psk.name)
-						actor_collection.children.link(mesh_obj)
-						context.view_layer.active_layer_collection = actor_layer.children[-1]
-						psk.execute(context)
-						mesh_cache[mesh_key] = mesh_obj
-					else:
-						log_error('WORLD', 'Can\'t find asset %s' % result_path)
-						mesh_obj = None
+					log_error('WORLD', 'Can\'t find asset %s' % result_path)
+					mesh_obj = None
 
 			instance_name = name
 

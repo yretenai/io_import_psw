@@ -13,9 +13,9 @@ def find_root_from_path(path: str):
 	while True:
 		root_files = glob(str(current_path) + sep + "*.root")
 		if len(root_files) == 1:
-			log_info('ACTORX', "Found root path %s" % str(current_path))
+			log_info('PSW', "Found root path %s" % str(current_path))
 			if os.path.exists(f"{str(current_path)}/Content"):
-				log_info('ACTORX', "Root is modern layout")
+				log_info('PSW', "Root is modern layout")
 				return str(current_path) + '/Content'
 			return str(current_path)
 		if current_path.parent == current_path:

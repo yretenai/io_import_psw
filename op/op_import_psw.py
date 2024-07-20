@@ -6,14 +6,14 @@ import bpy
 from bpy.props import CollectionProperty, FloatProperty, StringProperty, BoolProperty
 from bpy.types import Operator, Context, Property, OperatorFileListElement, TOPBAR_MT_file_import
 from bpy_extras.io_utils import ImportHelper
-from io_import_pskx.blend.psw import ActorXWorld
-from io_import_pskx.blend import nodes
-from io_import_pskx.utils import find_root_from_path
+from io_import_psw.blend.psw import World
+from io_import_psw.blend import nodes
+from io_import_psw.utils import find_root_from_path
 
 
 class op_import_psw(Operator, ImportHelper):
 	bl_idname = 'import_scene.psw'
-	bl_label = 'Import ActorX PSW'
+	bl_label = 'Import PSW'
 	bl_options = {'REGISTER', 'UNDO'}
 
 	filter_glob: StringProperty(default='*.psw', options={'HIDDEN'})
@@ -164,8 +164,8 @@ class op_import_psw(Operator, ImportHelper):
 			ret = {'CANCELLED'}
 			for file in self.files:
 				path = os.path.join(dirname, file.name)
-				if ActorXWorld(path, settings).execute(context) == {'FINISHED'}:
+				if World(path, settings).execute(context) == {'FINISHED'}:
 					ret = {'FINISHED'}
 			return ret
 		else:
-			return ActorXWorld(self.filepath, settings).execute(context)
+			return World(self.filepath, settings).execute(context)
