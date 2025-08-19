@@ -12,12 +12,13 @@ from io_import_psw.utils import log_error, log_warning, log_info
 
 enable_ueformat = False
 try:
-	log_info('WORLD', "trying to load ue_format for uemodel support")
-	from ue_format import UEFormatImport, UEModelOptions
+	log_info('PSWORLD_', "trying to load ue_format for uemodel support")
+	from io_scene_ueformat.importer.logic import UEFormatImport
+	from io_scene_ueformat.options import UEModelOptions
 	enable_ueformat = True
-	log_info('WORLD', "successfully loaded ue_format")
+	log_info('PSWORLD_', "successfully loaded ue_format")
 except:
-	log_error('WORLD', "failed to load ue_format")
+	log_error('PSWORLD_', "failed to load ue_format")
 	pass
 
 ignore_names = ['CUBE', 'SPHERE', 'CONE', 'CYLINDER', 'CAPSULE', 'BOX', 'ARROW', 'SPLINE', 'PLANE']
@@ -180,10 +181,10 @@ class World:
 		material_cache = {}
 		for actor_id, (name, game_path, parent, pos, rot, scale, no_shadow, hidden, _, is_static, material_start, material_len) in enumerate(self.psw.Actors):
 			if self.ignore_shapes and is_ignored_name(name):
-				log_info('WORLD', "hiding model %s because it is a shape" % (name))
+				log_info('PSWORLD_', "hiding model %s because it is a shape" % (name))
 				hidden = True
 			if self.ignore_lodactors and is_lodactor_or_hlod(name):
-				log_info('WORLD', "hiding model %s because it is a LOD Actor" % (name))
+				log_info('PSWORLD_', "hiding model %s because it is a LOD Actor" % (name))
 				hidden = True
 
 			material_range = self.psw.Materials[material_start:material_start+material_len]
@@ -191,7 +192,7 @@ class World:
 
 			skip_load = False
 			if self.no_skeletons and not is_static:
-				log_info('WORLD', "skipping model %s because it is not static" % (name))
+				log_info('PSWORLD_', "skipping model %s because it is not static" % (name))
 				skip_load = True
 
 			if self.no_static_instances:
@@ -203,10 +204,10 @@ class World:
 				mesh_obj = mesh_cache[mesh_key]
 			elif game_path != 'None' and self.import_mesh and skip_load is False:
 				if self.ignore_shapes and is_ignored_name(game_path):
-					log_info('WORLD', "hiding model %s because it is a shape" % (game_path))
+					log_info('PSWORLD_', "hiding model %s because it is a shape" % (game_path))
 					hidden = True
 				if self.ignore_lodactors and is_lodactor_or_hlod(game_path):
-					log_info('WORLD', "hiding model %s because it is a LOD actor" % (game_path))
+					log_info('PSWORLD_', "hiding model %s because it is a LOD actor" % (game_path))
 					hidden = True
 				result_path = game_path.strip('/').strip('\\')
 
@@ -223,15 +224,15 @@ class World:
 							mesh_obj = bpy.data.collections.new(name)
 							actor_collection.children.link(mesh_obj)
 							context.view_layer.active_layer_collection = actor_layer.children[-1]
-							target_obj = UEFormatImport(import_settings).import_file(uemodel_path)
+							target_obj = UEFormatImport(import_settings).import_file(uemodel_path)[0]
 							mesh_obj.name = undeduplicate_name(target_obj.name)
 							mesh_cache[mesh_key] = mesh_obj
 						else:
 							context.view_layer.active_layer_collection = instance_layer
-							mesh_obj = UEFormatImport(import_settings).import_file(uemodel_path)
+							mesh_obj = UEFormatImport(import_settings).import_file(uemodel_path)[0]
 							target_obj = mesh_obj
 				if not found:
-					log_error('WORLD', 'Can\'t find asset %s' % result_path)
+					log_error('PSWORLD_', 'Can\'t find asset %s' % result_path)
 					mesh_obj = None
 
 			instance_name = name
@@ -357,7 +358,7 @@ class World:
 				result_path = normpath(join_path(self.game_dir, result_path))
 
 				if not exists(result_path):
-					log_error('WORLD', 'Can\'t find asset %s' % (tex_path))
+					log_error('PSWORLD_', 'Can\'t find asset %s' % (tex_path))
 					continue
 
 				if type_id != 0:
@@ -401,7 +402,7 @@ class World:
 				landscape_name = actor.name + '_Sector%d_%d' % (tile_x, tile_y)
 
 				if offset > Vector((0.0, 0.0, 0.0)):
-					log_warning('WORLD', 'Off-center landscape: %s (%f, %f, %f)' % (landscape_name, offset.x, offset.y, offset.z))
+					log_warning('PSWORLD_', 'Off-center landscape: %s (%f, %f, %f)' % (landscape_name, offset.x, offset.y, offset.z))
 
 					if self.skip_offcenter:
 						continue

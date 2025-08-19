@@ -62,7 +62,7 @@ class World:
 		elif key == 'LANDSCAPE':
 			self.NPLandscapes = value
 		else:
-			log_error('PSW', 'Unhandled chunk %s' % (key))
+			log_error('PSWORLD_', 'Unhandled chunk %s' % (key))
 
 	def finalize(self, settings: dict[str, Property]):
 		resize_by: float = settings['resize_by'] if 'resize_by' in settings else 0.01
@@ -97,7 +97,7 @@ def read_chunk(stream: typing.BinaryIO) -> tuple[ndarray | None, str]:
 		if chunk_key == chunk_id or chunk_id.startswith(chunk_key):
 			return (numpy.fromfile(stream, dtype=dispatch[chunk_key], count=chunk_count), chunk_id)
 
-	log_error('PSW', 'No parser found for %s!' % (chunk_id))
+	log_error('PSWORLD_', 'No parser found for %s!' % (chunk_id))
 
 	stream.seek(total_size, 1)
 

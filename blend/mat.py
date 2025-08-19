@@ -2,6 +2,7 @@ import bpy
 from bpy.types import Material,  Property, Context
 from os.path import basename, dirname, sep, normpath, exists
 from os.path import join as join_path
+from io_import_psw.utils import log_warning
 import json
 
 class CUEMaterial:
@@ -55,28 +56,33 @@ class CUEMaterial:
 
 		mat = bpy.data.materials.new(name) if name not in bpy.data.materials else bpy.data.materials[name]
 		mat.use_nodes = True
+		selected_workflow = None
+
+		for workflow_name in self.material_data.get('Hierarchy', [name]):
+			if workflow_name not in bpy.data.node_groups: continue
+			selected_workflow = workflow_name
+			break
+
+		if selected_workflow is None:
+			workflow_names = self.material_data.get('Hierarchy', [name])
+			log_warning('PSWORLD_', 'unknown workflow [%s] on material "%s"' % (', '.join(workflow_names), mat.name))
+			group_node = mat.node_tree.nodes.new('ShaderNodeGroup')
+			group_node.label = workflow_names[0]
+			group_node.location = 10, -300
+			return mat
 
 		while mat.node_tree.nodes:
 			mat.node_tree.nodes.remove(mat.node_tree.nodes[0])
 
 		group_node = mat.node_tree.nodes.new('ShaderNodeGroup')
+		group_node.location = 10, 300
+		group_node.node_tree = bpy.data.node_groups[selected_workflow]
+		group_node.label = selected_workflow
 
 		out_node = mat.node_tree.nodes.new('ShaderNodeOutputMaterial')
-		group_node.location = 10, 300
 		out_node.location = 300, 300
-		found = False
-		for workflow_name in self.material_data.get('Hierarchy', [name]):
-			if workflow_name in bpy.data.node_groups:
-				found = True
-				group_node.node_tree = bpy.data.node_groups[workflow_name]
-				mat.node_tree.links.new(group_node.outputs[0], out_node.inputs[0])
-				group_node.label = workflow_name
-				break
 
-		if not found:
-			workflow_name = self.material_data.get('Hierarchy', [name])[0]
-			group_node.label = workflow_name
-			print('unknown workflow "%s" on material "%s"' % (workflow_name, mat.name))
+		mat.node_tree.links.new(group_node.outputs[0], out_node.inputs[0])
 
 		x = -750
 		y = 300
