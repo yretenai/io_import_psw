@@ -1,11 +1,10 @@
 from os.path import basename, dirname, splitext, sep, normpath, exists
 from os.path import join as join_path
 
-import numpy
 import bpy.types
 import io_import_psw.utils as utils
 from bpy.types import Property, Context, Collection, Mesh, Object, NodesModifier, GeometryNodeTree, NodeGroupOutput, GeometryNodeGroup, Image, Material, ShaderNodeTexCoord, ShaderNodeSeparateXYZ, NodeReroute, ShaderNodeTexImage
-from mathutils import Quaternion, Vector, Color
+from mathutils import Quaternion, Vector
 from io_import_psw.io import read_file, World
 from io_import_psw.blend.mat import CUEMaterial
 from io_import_psw.utils import log_error, log_warning, log_info
@@ -39,31 +38,6 @@ def is_ignored_name(path: str) -> bool:
 def is_lodactor_or_hlod(path: str) -> bool:
 	test = basename(path).split('.')[0].upper()
 	return 'LODACTOR_' in test or '_HLOD_' in test
-
-
-def convert_temperature(temperature: float) -> Color:
-	temperature = numpy.clip(temperature, 1000, 40000)
-	temperature = temperature / 100.0
-
-	if temperature <= 66:
-		red = 255
-	else:
-		red = 329.698727446 * (temperature - 60)**-0.1332047592
-
-	if temperature <= 66:
-		green = 99.4708025861 * numpy.log(temperature) - 161.1195681661
-	else:
-		green = 288.1221695283 * (temperature - 60)**-0.0755148492
-
-	if temperature >= 66:
-		blue = 255
-	elif temperature <= 19:
-		blue = 0
-	else:
-		blue = 138.5177312231 * numpy.log(temperature - 10) - 305.0447927307
-
-	rgb = numpy.clip((red, green, blue), 0, 255) / 255
-	return Color((rgb[0], rgb[1], rgb[2]))
 
 
 def undeduplicate_name(name: str) -> str:
@@ -297,30 +271,31 @@ class World:
 
 		if self.import_light:
 			for (actor_id, color, light_type, whl, attenuation, radius, temp, bias, lumens, angle) in self.psw.Lights:
-				light_type_bl = 'POINT'
+				should_disable = False
 				if light_type == 0:
-					if self.adjust_sun_intensity <= 0.0001:
-						continue
+					if self.adjust_sun_intensity <= 1e-10:
+						should_disable = True
 					light_type_bl = 'SUN'
-				elif light_type == 1:
-					if self.adjust_intensity <= 0.0001:
-						continue
 				elif light_type == 2:
-					if self.adjust_spot_intensity <= 0.0001:
-						continue
+					if self.adjust_spot_intensity <= 1e-10:
+						should_disable = True
 					light_type_bl = 'SPOT'
 				elif light_type == 3:
-					if self.adjust_area_intensity <= 0.0001:
-						continue
+					if self.adjust_area_intensity <= 1e-10:
+						should_disable = True
 					light_type_bl = 'AREA'
+				else:
+					if self.adjust_intensity <= 1e-10:
+						should_disable = True
+					light_type_bl = 'POINT'
 				actor = actor_cache[actor_id]
 				actor_data = self.psw.Actors[actor_id]
 				bl_light_data = bpy.data.lights.new(name=actor.name + '_light', type=light_type_bl)
 				bl_light_data.use_shadow = not actor_data[6]
 				bl_light_data.color = color
 				if actor_data[8]:
-					bl_light_data.color = convert_temperature(temp)
-					lumens = lumens * 100
+					bl_light_data.use_temperature = True
+					bl_light_data.temperature = temp
 				bl_light_data.shadow_soft_size = bias
 				if light_type == 0:
 					bl_light_data.energy = lumens * self.adjust_sun_intensity
@@ -338,6 +313,9 @@ class World:
 				bl_light_obj.parent = actor
 				bl_light_obj.rotation_mode = 'QUATERNION'
 				bl_light_obj.rotation_quaternion = Quaternion((0.707107, 0, -0.707107, 0))
+				if should_disable:
+					bl_light_obj.hide_render = True
+					bl_light_obj.hide_viewport = True
 				if light_type == 0:
 					sun_light_collection.objects.link(bl_light_obj)
 				elif light_type == 1:

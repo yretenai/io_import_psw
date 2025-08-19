@@ -50,7 +50,7 @@ class op_import_psw(Operator, ImportHelper):
 	adjust_spot_intensity: FloatProperty(
 			name='Spot Light Power',
 			description='Adjust Spot Light Intensity By',
-			default=0.0025,
+			default=0.001,
 			min=0.0,
 			soft_max=10.0
 	)
@@ -58,7 +58,7 @@ class op_import_psw(Operator, ImportHelper):
 	adjust_sun_intensity: FloatProperty(
 			name='Sun Light Power',
 			description='Adjust Directional Light Intensity By',
-			default=0.001,
+			default=0.0001,
 			min=0.0,
 			soft_max=10.0
 	)
