@@ -47,42 +47,60 @@ class CUEMaterial:
 			return None
 
 		name = self.material_data['Name']
-		textures = self.material_data.get('Textures', {})
-		scalars = self.material_data.get('Scalars', {})
-		vectors = self.material_data.get('Vectors', {})
-		doubleVectors = self.material_data.get('DoubleVectors', {})
-		switches = self.material_data.get('Switches', {})
-		masks = self.material_data.get('Masks', {})
+		textures = self.material_data.get('Textures') or {}
+		scalars = self.material_data.get('Scalars') or {}
+		vectors = self.material_data.get('Vectors') or {}
+		doubleVectors = self.material_data.get('DoubleVectors') or {}
+		switches = self.material_data.get('Switches') or {}
+		masks = self.material_data.get('Masks') or {}
+		subsurf = self.material_data.get('SubsurfaceProfile') or {}
+
+		for (subsurf_name, subsurf_value) in subsurf.items():
+			if isinstance(subsurf_value, dict):
+				vectors[subsurf_name] = subsurf_value
+			elif isinstance(subsurf_value, bool):
+				switches[subsurf_name] = subsurf_value
+			elif isinstance(subsurf_value, int):
+				sclaars[subsurf_name] = subsurf_value
 
 		mat = bpy.data.materials.new(name) if name not in bpy.data.materials else bpy.data.materials[name]
 		mat.use_nodes = True
 		selected_workflow = None
 
+		workflow_names = self.material_data.get('Hierarchy', [name])
+		workflow_names.reverse()
+
 		for workflow_name in self.material_data.get('Hierarchy', [name]):
 			if workflow_name not in bpy.data.node_groups: continue
 			selected_workflow = workflow_name
+			selected_group = bpy.data.node_groups[selected_workflow]
 			break
-
-		if selected_workflow is None:
-			workflow_names = self.material_data.get('Hierarchy', [name])
-			log_warning('PSWORLD_', 'unknown workflow [%s] on material "%s"' % (', '.join(workflow_names), mat.name))
-			group_node = mat.node_tree.nodes.new('ShaderNodeGroup')
-			group_node.label = workflow_names[0]
-			group_node.location = 10, -300
-			return mat
 
 		while mat.node_tree.nodes:
 			mat.node_tree.nodes.remove(mat.node_tree.nodes[0])
 
-		group_node = mat.node_tree.nodes.new('ShaderNodeGroup')
-		group_node.location = 10, 300
-		group_node.node_tree = bpy.data.node_groups[selected_workflow]
-		group_node.label = selected_workflow
+		if selected_workflow is None:
+			log_warning('PSWORLD_', 'unknown workflow [%s] on material "%s"' % (', '.join(workflow_names), mat.name))
 
+			if 'PSW Fallback' not in bpy.data.node_groups:
+				group_node = mat.node_tree.nodes.new('ShaderNodeGroup')
+				group_node.label = workflow_names[-1]
+			else:
+				selected_workflow = workflow_names[-1]
+				selected_group = bpy.data.node_groups['PSW Fallback'].copy()
+				selected_group.name = selected_workflow
+
+		if selected_workflow is not None:
+			group_node = mat.node_tree.nodes.new('ShaderNodeGroup')
+			group_node.node_tree = selected_group
+			group_node.label = selected_workflow
+
+		group_node.location = 10, -300
 		out_node = mat.node_tree.nodes.new('ShaderNodeOutputMaterial')
 		out_node.location = 300, 300
 
-		mat.node_tree.links.new(group_node.outputs[0], out_node.inputs[0])
+		if len(group_node.outputs) > 0:
+			mat.node_tree.links.new(group_node.outputs[0], out_node.inputs[0])
 
 		x = -750
 		y = 300
@@ -143,10 +161,12 @@ class CUEMaterial:
 			real_name = basename(tex_path)
 			texture_node.image = bpy.data.images.load(tex_path) if real_name not in bpy.data.images else bpy.data.images[real_name]
 			texture_node.image.alpha_mode = 'CHANNEL_PACKED'
+			texture_node.image.colorspace_settings.name = 'Non-Color'
 
 		x = -450
 		y = 300
 		height = 100
+
 		for (scalar_name, scalar_value) in scalars.items():
 			value_node = mat.node_tree.nodes.new('ShaderNodeValue')
 			value_node.label = scalar_name
