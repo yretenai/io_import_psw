@@ -1,6 +1,6 @@
 import bpy
 
-from io_import_psw.op import op_import_psw, op_import_mat
+from . import op_import_psw, op_import_mat
 
 
 class psw_menu(bpy.types.Menu):

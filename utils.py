@@ -1,3 +1,4 @@
+import logging
 from bpy.types import Context, Object
 from glob import glob
 from numpy import ndarray
@@ -7,6 +8,7 @@ import bpy
 import numpy
 import os.path
 
+LOG = logging.getLogger(f'{__name__}')
 
 def find_root_from_path(path: str):
 	current_path = Path(path).parent.absolute()
@@ -30,17 +32,6 @@ def fix_string(string: str) -> str:
 def fix_string_np(string: ndarray) -> str:
 	return numpy.trim_zeros(string).tobytes().decode(errors='replace', encoding='utf8')
 
-INFO = u"\u001b[35m"
-ERROR = u"\u001b[31m"
-WARNING = u"\u001b[33m"
-RESET = u"\u001b[0m"
-
-def log_info(category: str, message: str):
-	print(f'{INFO}[{category}]{RESET} {message}')
-
-
-def log_error(category: str, message: str):
-	print(f'{ERROR}[{category}]{RESET} {message}')
-
-def log_warning(category: str, message: str):
-	print(f'{WARNING}[{category}]{RESET} {message}')
+def log_info(category: str, message: str): LOG.info('[%s] %s', category, message)
+def log_error(category: str, message: str): LOG.error('[%s] %s', category, message)
+def log_warning(category: str, message: str): LOG.warning('[%s] %s', category, message)

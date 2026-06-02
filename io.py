@@ -3,7 +3,7 @@ from struct import unpack
 
 import numpy
 from bpy.types import Property
-from io_import_psw.utils import fix_string_np, fix_string, log_error
+from .utils import fix_string_np, fix_string, log_error
 from mathutils import Quaternion, Vector, Color
 from numpy import dtype, ndarray
 from numpy.typing import DTypeLike

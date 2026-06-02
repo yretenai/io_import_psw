@@ -2,7 +2,7 @@ import bpy
 from bpy.types import Material,  Property, Context
 from os.path import basename, dirname, sep, normpath, exists
 from os.path import join as join_path
-from io_import_psw.utils import log_warning
+from ..utils import log_warning
 import json
 
 class CUEMaterial:

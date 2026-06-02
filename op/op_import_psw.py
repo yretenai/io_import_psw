@@ -6,9 +6,9 @@ import bpy
 from bpy.props import CollectionProperty, FloatProperty, StringProperty, BoolProperty
 from bpy.types import Operator, Context, Property, OperatorFileListElement, TOPBAR_MT_file_import
 from bpy_extras.io_utils import ImportHelper
-from io_import_psw.blend.psw import World
-from io_import_psw.blend import nodes
-from io_import_psw.utils import find_root_from_path
+from ..blend.psw import World
+from ..blend import nodes
+from ..utils import find_root_from_path
 
 
 class op_import_psw(Operator, ImportHelper):

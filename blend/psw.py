@@ -2,23 +2,28 @@ from os.path import basename, dirname, splitext, sep, normpath, exists
 from os.path import join as join_path
 
 import bpy.types
-import io_import_psw.utils as utils
 from bpy.types import Property, Context, Collection, Mesh, Object, NodesModifier, GeometryNodeTree, NodeGroupOutput, GeometryNodeGroup, Image, Material, ShaderNodeTexCoord, ShaderNodeSeparateXYZ, NodeReroute, ShaderNodeTexImage
 from mathutils import Quaternion, Vector
-from io_import_psw.io import read_file, World
-from io_import_psw.blend.mat import CUEMaterial
-from io_import_psw.utils import log_error, log_warning, log_info
+from ..io import read_file, World
+from .mat import CUEMaterial
+from ..utils import log_error, log_warning, log_info
 
-enable_ueformat = False
-try:
-	log_info('PSWORLD_', "trying to load ue_format for uemodel support")
-	from io_scene_ueformat.importer.logic import UEFormatImport
-	from io_scene_ueformat.options import UEModelOptions
-	enable_ueformat = True
-	log_info('PSWORLD_', "successfully loaded ue_format")
-except:
-	log_error('PSWORLD_', "failed to load ue_format")
-	pass
+_enable_ueformat = None
+
+def has_ueformat():
+	global _enable_ueformat
+	if _enable_ueformat is None:
+		_enable_ueformat = False
+		try:
+			log_info('PSWORLD_', "trying to load ue_format for uemodel support")
+			from io_scene_ueformat.importer.logic import UEFormatImport
+			from io_scene_ueformat.options import UEModelOptions
+			_enable_ueformat = True
+			log_info('PSWORLD_', "successfully loaded ue_format")
+		except:
+			log_error('PSWORLD_', "failed to load ue_format")
+			pass
+	return _enable_ueformat
 
 ignore_names = ['CUBE', 'SPHERE', 'CONE', 'CYLINDER', 'CAPSULE', 'BOX', 'ARROW', 'SPLINE', 'PLANE']
 
@@ -189,7 +194,7 @@ class World:
 					result_path = result_path.replace('/', sep)
 
 				found = False
-				if enable_ueformat:
+				if has_ueformat():
 					uemodel_path = self.try_find_umodel(result_path)
 					if uemodel_path is not None:
 						found = True
